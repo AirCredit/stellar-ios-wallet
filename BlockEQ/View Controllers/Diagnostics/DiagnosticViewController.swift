@@ -20,13 +20,14 @@ final class DiagnosticViewController: UIViewController {
     @IBOutlet weak var descriptionLabel: UILabel!
     @IBOutlet weak var stepCollectionView: UICollectionView!
 
-    static let cellSpacing = CGFloat(30)
+    static let cellSpacing = CGFloat(25)
     static let stepCornerRadius = CGFloat(25)
 
     override var preferredStatusBarStyle: UIStatusBarStyle { return .lightContent }
 
     weak var delegate: DiagnosticViewControllerDelegate?
     var viewModel: DiagnosticDataCell.ViewModel?
+    var diagnosticId: String?
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -61,9 +62,10 @@ final class DiagnosticViewController: UIViewController {
 
         let layout = stepCollectionView.collectionViewLayout as? UICollectionViewFlowLayout
         layout?.scrollDirection = .horizontal
-        layout?.minimumLineSpacing = DiagnosticViewController.cellSpacing
         layout?.minimumInteritemSpacing = DiagnosticViewController.cellSpacing
-        layout?.estimatedItemSize = CGSize(width: stepCollectionView.frame.width, height: 200)
+        layout?.minimumLineSpacing = stepCollectionView.frame.height
+        layout?.estimatedItemSize = CGSize(width: stepCollectionView.frame.width,
+                                           height: stepCollectionView.frame.height)
 
         titleLabel?.text = DiagnosticCoordinator.DiagnosticStep.summary.title
         descriptionLabel?.text = DiagnosticCoordinator.DiagnosticStep.summary.description
@@ -82,11 +84,41 @@ final class DiagnosticViewController: UIViewController {
         self.viewModel = DiagnosticDataCell.ViewModel(with: diagnostic)
         self.stepCollectionView?.reloadData()
     }
+
+    func showDiagnosticResult(identifier: Int?) {
+        hideHud()
+
+        if let diagnosticId = identifier {
+            self.diagnosticId = String(diagnosticId)
+        }
+
+        self.scrollTo(step: .completion, animated: true)
+    }
+
+    func showHud() {
+        let hud = MBProgressHUD.showAdded(to: view, animated: true)
+        hud.label.text = "SENDING_DIAGNOSTIC".localized()
+        hud.mode = .indeterminate
+    }
+
+    func hideHud() {
+        MBProgressHUD.hide(for: view, animated: true)
+    }
+
+    func cellWidth(for collectionView: UICollectionView) -> CGFloat {
+        var width = collectionView.frame.width
+
+        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            width -= layout.minimumInteritemSpacing * 2
+        }
+
+        return width
+    }
 }
 
 extension DiagnosticViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return 3
+        return DiagnosticCoordinator.DiagnosticStep.all.count
     }
 
     func collectionView(_ collectionView: UICollectionView,
@@ -100,9 +132,12 @@ extension DiagnosticViewController: UICollectionViewDataSource {
             if let viewModel = self.viewModel {
                 dataCell.update(with: viewModel)
             }
+            dataCell.cellWidthConstraint.constant = cellWidth(for: collectionView)
             cell = dataCell
         default:
             let completedCell: DiagnosticCompletedCell = collectionView.dequeueReusableCell(for: indexPath)
+            completedCell.update(with: diagnosticId)
+            completedCell.cellWidthConstraint.constant = cellWidth(for: collectionView)
             cell = completedCell
         }
 

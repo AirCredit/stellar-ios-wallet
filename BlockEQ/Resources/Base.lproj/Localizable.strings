@@ -221,3 +221,5 @@
 "OPERATION_OPTIONS_SET_SIGNER_DESCRIPTION" = "%@ signer %@ with weight %@";
 
 "LOADING_TRANSACTION" = "Loading Transaction...";
+"SENDING_DIAGNOSTIC" = "Sending Diagnostic...";
+"FAILED_DIAGNOSTIC" = "Failed";

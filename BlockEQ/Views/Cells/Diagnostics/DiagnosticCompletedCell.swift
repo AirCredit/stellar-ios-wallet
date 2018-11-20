@@ -46,7 +46,26 @@ final class DiagnosticCompletedCell: UICollectionViewCell, ReusableView, NibLoad
         diagnosticIdLabel.text = "31"
     }
 
-    func update(with diagnosticId: String) {
-        diagnosticIdLabel.text = diagnosticId
+    func update(with diagnosticId: String?) {
+        if let diagnosticId = diagnosticId {
+            diagnosticIdLabel.text = diagnosticId
+            imageView.image = UIImage(named: "icon-check")
+            imageView.tintColor = Colors.green
+        } else {
+            diagnosticIdLabel.text = "FAILED_DIAGNOSTIC".localized()
+            imageView.image = UIImage(named: "icon-check")
+            imageView.tintColor = Colors.red
+        }
+    }
+
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes) -> UICollectionViewLayoutAttributes {
+        setNeedsLayout()
+        layoutIfNeeded()
+        let size = contentView.systemLayoutSizeFitting(layoutAttributes.size)
+        var frame = layoutAttributes.frame
+        frame.size.height = ceil(size.height)
+        layoutAttributes.frame = frame
+        return layoutAttributes
     }
 }

@@ -86,13 +86,12 @@ final class DiagnosticCoordinator {
             return
         }
 
+        diagnosticViewController.showHud()
+
         let diagnosticOperation = SendDiagnosticOperation(
             diagnostic: diagnostic,
             completion: { result in
-                print(String(result ?? 0))
-        },
-            failure: { error in
-                print(error.localizedDescription)
+                self.diagnosticViewController.showDiagnosticResult(identifier: result)
         })
 
         diagnosticQueue.addOperation(diagnosticOperation)
@@ -101,14 +100,11 @@ final class DiagnosticCoordinator {
 
 extension DiagnosticCoordinator: DiagnosticViewControllerDelegate {
     func selectedNextStep(_ viewController: DiagnosticViewController) {
+        step = step.next
+
         if step == .completion {
             sendDiagnostic()
         }
-
-        let nextStep = step.next
-        diagnosticViewController.scrollTo(step: nextStep, animated: true)
-
-        step = nextStep
     }
 
     func selectedClose(_ viewController: DiagnosticViewController) {
