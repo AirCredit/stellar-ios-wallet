@@ -6,12 +6,25 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import Whisper
 import stellarsdk
-import UIKit
+import StellarHub
 
-class SendAmountViewController: UIViewController {
+protocol SendAmountViewControllerDelegate: AnyObject {
+    func validateSendAmount(amount: String) -> Bool
+    func requestedSendAmount(_ viewController: SendAmountViewController, amount: Decimal, memo: String?)
+    func cancelledSendAmount(_ viewController: SendAmountViewController)
+}
 
+extension SendAmountViewController {
+    struct ViewModel {
+        var destinationAddress: String
+        var exchange: Exchange?
+        var availableSendBalance: Decimal
+        var assetShortCode: String
+    }
+}
+
+final class SendAmountViewController: UIViewController {
     @IBOutlet var amountLabel: UILabel!
     @IBOutlet var exchangeLabel: UILabel!
     @IBOutlet var exchangeLabelHeightConstraint: NSLayoutConstraint!
@@ -26,68 +39,22 @@ class SendAmountViewController: UIViewController {
     let decimalCountRestriction = 7
     let decimalDotSize = 1
 
-    var receiver: String = ""
+    weak var delegate: SendAmountViewControllerDelegate?
+
     var sendingAmount: String = "0"
-    var stellarAccount: StellarAccount = StellarAccount()
-    var currentAssetIndex = 0
-    var isExchangeAddress: Bool = false
+    var currentAsset: StellarAsset?
+    var requiresExchangeAddress: Bool = false
     var exchangeName: String = ""
-    var authenticationCoordinator: AuthenticationCoordinator?
-
-    @IBAction func sendPayment() {
-        guard let amount = amountLabel.text, !amount.isEmpty, amount != "0", isValidSendAmount(amount: amount) else {
-            amountLabel.shake()
-            return
-        }
-
-        if isExchangeAddress {
-            guard let memo = memoIdTextField.text, !memo.isEmpty else {
-                memoIdLabel.shake()
-                return
-            }
-        }
-
-        if SecurityOptionHelper.check(.pinOnPayment) {
-            authenticate()
-        } else {
-            sendPaymentAmount()
-        }
-    }
-
-    @IBAction func clearTextfield() {
-        view.endEditing(true)
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
-
-    init(stellarAccount: StellarAccount, currentAssetIndex: Int, receiver: String, exchangeName: String?) {
-        super.init(nibName: String(describing: SendAmountViewController.self), bundle: nil)
-
-        self.receiver = receiver
-        self.stellarAccount = stellarAccount
-        self.currentAssetIndex = currentAssetIndex
-
-        if let exchange = exchangeName {
-            isExchangeAddress = true
-            self.exchangeName = exchange
-        }
-
-        var availableBalance = ""
-        if stellarAccount.assets[currentAssetIndex].assetType == AssetTypeAsString.NATIVE {
-            availableBalance = stellarAccount.formattedAvailableBalance
-        } else {
-            availableBalance = stellarAccount.assets[currentAssetIndex].formattedBalance
-        }
-
-        navigationItem.title = "\(availableBalance) \(stellarAccount.assets[currentAssetIndex].shortCode)"
-    }
+    var availableAmount = Decimal(0)
 
     override func viewDidLoad() {
         super.viewDidLoad()
-
         setupView()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        view.endEditing(true)
     }
 
     func setupView() {
@@ -98,7 +65,7 @@ class SendAmountViewController: UIViewController {
 
         navigationItem.rightBarButtonItem = rightBarButtonItem
 
-        self.keyboardHolderView.delegate = self
+        keyboardHolderView.delegate = self
 
         amountLabel.textColor = Colors.primaryDark
         exchangeHolderView.backgroundColor = Colors.red
@@ -108,9 +75,7 @@ class SendAmountViewController: UIViewController {
         memoIdLabel.textColor = Colors.darkGray
         memoIdTextField.textColor = Colors.darkGray
 
-        currencyLabel.text = stellarAccount.assets[currentAssetIndex].shortCode
-        sendAddressLabel.text = "To: \(receiver)"
-
+        currencyLabel.text = currentAsset?.shortCode
         memoIdTextField.inputAccessoryView = toolBar
 
         keyboardHolderView.update(with: KeyboardViewModel(options: KeyboardOptions.all,
@@ -120,16 +85,6 @@ class SendAmountViewController: UIViewController {
                                                           labelColor: Colors.primaryDark,
                                                           buttonColor: Colors.primaryDark,
                                                           backgroundColor: .clear))
-
-        if isExchangeAddress {
-            displayExchangeRequiredMessage()
-        }
-    }
-
-    func displayExchangeRequiredMessage() {
-        memoIdTextField.placeholder = "REQUIRED_PLACEHOLDER".localized()
-        exchangeLabelHeightConstraint.constant = 40.0
-        exchangeLabel.text = String(format: "EXCHANGE_ADDRESS_PROMPT_FORMAT".localized(), exchangeName)
     }
 
     @objc func dismissView() {
@@ -137,159 +92,62 @@ class SendAmountViewController: UIViewController {
         dismiss(animated: true, completion: nil)
     }
 
-    func authenticate() {
-        if let authCoordinator = self.authenticationCoordinator {
-            authCoordinator.authenticate()
-        } else {
-            let opts = AuthenticationCoordinator.AuthenticationOptions(cancellable: true,
-                                                                       presentVC: true,
-                                                                       forcedStyle: nil,
-                                                                       limitPinEntries: true)
-            let authCoordinator = AuthenticationCoordinator(container: self, options: opts)
-            authCoordinator.delegate = self
+    func update(with viewModel: ViewModel) {
+        availableAmount = viewModel.availableSendBalance
 
-            self.authenticationCoordinator = authCoordinator
+        title = String(format: "TRADE_BALANCE_FORMAT".localized(),
+                       viewModel.availableSendBalance.tradeFormattedString,
+                       viewModel.assetShortCode)
 
-            authCoordinator.authenticate()
+        sendAddressLabel.text = String(format: "SEND_TO_FORMAT".localized(), viewModel.destinationAddress)
+
+        if let exchange = viewModel.exchange {
+            requiresExchangeAddress = true
+            exchangeName = exchange.name
+            memoIdTextField.placeholder = "REQUIRED_PLACEHOLDER".localized()
+            exchangeLabelHeightConstraint.constant = 40.0
+            exchangeLabel.text = String(format: "EXCHANGE_ADDRESS_PROMPT_FORMAT".localized(), exchangeName)
         }
-    }
-
-    func displayTransactionError() {
-        hideHud()
-
-        let alert = UIAlertController(title: "TRANSACTION_ERROR_TITLE".localized(),
-                                      message: "TRANSACTION_ERROR_MESSAGE".localized(),
-                                      preferredStyle: .alert)
-
-        alert.addAction(UIAlertAction(title: "GENERIC_OK_TEXT".localized(),
-                                      style: .default,
-                                      handler: nil))
-
-        present(alert, animated: true, completion: nil)
-    }
-
-    func displayTransactionSuccess() {
-        hideHud()
-
-        let message = Message(title: "TRANSACTION_SUCCESS".localized(), backgroundColor: Colors.green)
-        Whisper.show(whisper: message, to: navigationController!, action: .show)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            Whisper.hide(whisperFrom: self.navigationController!)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.dismissView()
-            }
-        }
-    }
-
-    func isValidSendAmount(amount: String) -> Bool {
-        var totalAvailableBalance: Double = 0.00
-        if stellarAccount.assets[currentAssetIndex].assetType == AssetTypeAsString.NATIVE {
-            totalAvailableBalance = stellarAccount.availableBalance
-        } else {
-            totalAvailableBalance = Double(stellarAccount.assets[currentAssetIndex].balance)!
-        }
-
-        if let totalSendable = Double(amount) {
-            return totalSendable.isZero ? false : totalSendable <= totalAvailableBalance
-        }
-
-        return false
-    }
-
-    func showHud() {
-        let hud = MBProgressHUD.showAdded(to: (navigationController?.view)!, animated: true)
-        hud.label.text = "Sending Payment..."
-        hud.mode = .indeterminate
-    }
-
-    func hideHud() {
-        MBProgressHUD.hide(for: (navigationController?.view)!, animated: true)
-    }
-
-    func sendPaymentAmount() {
-        guard let amount = amountLabel.text, !amount.isEmpty, amount != "0" else {
-            return
-        }
-
-        checkForValidAccount(account: receiver, amount: Decimal(string: amount)!)
     }
 }
 
+// MARK: - IBActions
+extension SendAmountViewController {
+    @IBAction func sendPayment() {
+        guard let amountText = amountLabel.text, !amountText.isEmpty, let amount = Decimal(string: amountText) else {
+            amountLabel.shake()
+            return
+        }
+
+        guard delegate?.validateSendAmount(amount: amountText) == true else {
+            amountLabel.shake()
+            return
+        }
+
+        if requiresExchangeAddress {
+            guard let memo = memoIdTextField.text, !memo.isEmpty else {
+                memoIdLabel.shake()
+                return
+            }
+        }
+
+        delegate?.requestedSendAmount(self, amount: amount, memo: memoIdTextField.text)
+    }
+
+    @IBAction func clearTextfield() {
+        view.endEditing(true)
+    }
+}
+
+// MARK: - UITextFieldDelegate
 extension SendAmountViewController: UITextFieldDelegate {
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         view.endEditing(true)
-
         return true
     }
 }
 
-extension SendAmountViewController: AuthenticationCoordinatorDelegate {
-    func authenticationCompleted(_ coordinator: AuthenticationCoordinator,
-                                 options: AuthenticationCoordinator.AuthenticationContext?) {
-        sendPaymentAmount()
-        authenticationCoordinator = nil
-    }
-
-    func authenticationCancelled(_ coordinator: AuthenticationCoordinator,
-                                 options: AuthenticationCoordinator.AuthenticationContext) {
-    }
-
-    func authenticationFailed(_ coordinator: AuthenticationCoordinator,
-                              error: AuthenticationCoordinator.AuthenticationError?,
-                              options: AuthenticationCoordinator.AuthenticationContext) {
-    }
-}
-
-/**
- * Sending payment.
- */
-extension SendAmountViewController {
-    func checkForValidAccount(account accountId: String, amount: Decimal) {
-        showHud()
-
-        AccountOperation.getAccountDetails(accountId: accountId) { accounts in
-            if accounts.count > 0 {
-                self.postPaymentTransaction(accountId: accountId, amount: amount)
-            } else {
-                self.fundNewAccount(account: accountId, amount: amount)
-            }
-        }
-    }
-
-    func fundNewAccount(account accountId: String, amount: Decimal) {
-        AccountOperation.createNewAccount(accountId: accountId, amount: amount) { completed in
-            if completed {
-                self.displayTransactionSuccess()
-            } else {
-                self.displayTransactionError()
-            }
-        }
-    }
-
-    func postPaymentTransaction(accountId: String, amount: Decimal) {
-        var memoId = ""
-
-        if let memoIdString = memoIdTextField.text {
-            memoId = memoIdString
-        }
-
-        let stellarAsset = stellarAccount.assets[currentAssetIndex]
-
-        PaymentTransactionOperation.postPayment(accountId: accountId,
-                                                amount: amount,
-                                                memoId: memoId,
-                                                stellarAsset: stellarAsset) { completed in
-            if completed {
-                self.displayTransactionSuccess()
-            } else {
-                self.displayTransactionError()
-            }
-        }
-    }
-}
-
+// MARK: - KeyboardViewDelegate
 extension SendAmountViewController: KeyboardViewDelegate {
     func selected(key: KeyboardButton, action: UIEvent) {
         let containsDecimal = sendingAmount.contains(".")
@@ -307,7 +165,7 @@ extension SendAmountViewController: KeyboardViewDelegate {
 
         sendingAmount = restrictDecimalPlaces(amount: sendingAmount)
 
-        if isValidSendAmount(amount: sendingAmount) || sendingAmount == "0" {
+        if delegate?.validateSendAmount(amount: sendingAmount) == true || sendingAmount == "0" {
             amountLabel.textColor = Colors.primaryDark
         } else {
             amountLabel.textColor = Colors.red

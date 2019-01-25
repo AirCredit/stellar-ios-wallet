@@ -35,6 +35,14 @@ struct Colors {
     static let red = UIColor(red: 255.0/255.0, green: 105.0/255.0, blue: 97.0/255.0, alpha: Alphas.opaque)
     static let stellarBlue = UIColor(red: 205.0/255.0, green: 224.0/255.0, blue: 232.0/255.0, alpha: Alphas.opaque)
     static let transparent = UIColor.clear
+
+    static let priceDarkGray = UIColor(red: 0.251, green: 0.251, blue: 0.251, alpha: Alphas.opaque)
+    static let priceLightGray = UIColor(red: 0.627, green: 0.627, blue: 0.627, alpha: Alphas.opaque)
+
+    static let collectionViewBackground = UIColor(red: 0.936, green: 0.941, blue: 0.941, alpha: Alphas.opaque)
+    static let transactionCellDarkGray = UIColor(red: 0.188, green: 0.188, blue: 0.188, alpha: Alphas.opaque)
+    static let transactionCellMediumGray = UIColor(red: 0.565, green: 0.565, blue: 0.565, alpha: Alphas.opaque)
+    static let transactionCellBorderGray = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: Alphas.opaque)
 }
 //swiftlint:enable line_length
 
@@ -43,77 +51,6 @@ public struct Alphas {
     static let opaqueTransparent = CGFloat(0.7)
     static let semiTransparent = CGFloat(0.5)
     static let transparent = CGFloat(0.2)
-}
-
-public struct HorizonServer {
-    static let production = "https://horizon.stellar.org"
-    static let test = "https://horizon-testnet.stellar.org"
-    static let url = HorizonServer.production
-}
-
-public struct Stellar {
-    static let sdk = StellarSDK(withHorizonUrl: HorizonServer.url)
-    static let network = Network.public
-}
-
-public struct Assets {
-    enum AssetType: String {
-        case points = "PTS"
-        case cad = "CAD"
-
-        var shortForm: String {
-            return self.rawValue
-        }
-
-        var issuerAccount: String {
-            switch self {
-            case .points: return "GBPG7KRYC3PTKHBXQGRD3GMZ5DB4C3D553ZN2ZLH57LBAQIULVY46Z5F"
-            case .cad: return "GABK2IHWW7BCRPP3BL6WMOMDBPHCBJR2SLP5HAUBYKNZG5J5RJSROS5S"
-            }
-        }
-    }
-
-    static let all: [AssetType] = [.points, .cad]
-
-    static func cellDisplay(shortCode: String?) -> String {
-        if let assetCode = shortCode {
-          return assetCode
-        }
-        return "XLM"
-    }
-
-    static func displayTitle(shortCode: String) -> String {
-        if shortCode == "XLM" {
-            return "Stellar Lumens"
-        } else if shortCode == "PTS" {
-            return "Block Points"
-        } else if shortCode == "CAD" {
-            return "Canadian Dollar"
-        }
-        return shortCode
-    }
-
-    static func displayImage(shortCode: String) -> UIImage? {
-        if shortCode == "XLM" {
-            return UIImage(named: "stellar")
-        } else if shortCode == "PTS" {
-            return UIImage(named: "blockpoints")
-        } else if shortCode == "CAD" {
-            return UIImage(named: "canada")
-        }
-        return nil
-    }
-
-    static func displayImageBackgroundColor(shortCode: String) -> UIColor {
-        if shortCode == "XLM" {
-            return Colors.stellarBlue
-        } else if shortCode == "PTS" {
-            return Colors.primaryDark
-        } else if shortCode == "CAD" {
-            return Colors.white
-        }
-        return Colors.blueGray
-    }
 }
 
 enum MenuItem {

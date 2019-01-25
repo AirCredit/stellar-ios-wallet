@@ -6,17 +6,16 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import UIKit
+import Reusable
 
 protocol OffersCellDelegate: AnyObject {
     func deleteOffer(indexPath: IndexPath)
 }
 
-class OffersCell: UITableViewCell, ReusableView {
+final class OffersCell: UITableViewCell, NibReusable {
     @IBOutlet weak var offerLabel: UILabel!
     @IBOutlet weak var deleteButton: UIButton!
 
-    static let cellIdentifier = "OffersCell"
     static let rowHeight: CGFloat = 80.0
 
     weak var delegate: OffersCellDelegate?
@@ -34,5 +33,6 @@ class OffersCell: UITableViewCell, ReusableView {
 
         offerLabel.textColor = Colors.darkGray
         deleteButton.tintColor = Colors.red
+        deleteButton.contentMode = .scaleAspectFit
     }
 }

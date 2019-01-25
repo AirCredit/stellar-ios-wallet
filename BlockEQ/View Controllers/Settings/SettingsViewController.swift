@@ -6,9 +6,9 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import Foundation
+import Reusable
 
-final class UppercasedTableViewHeader: UITableViewHeaderFooterView, ReusableView {
+final class UppercasedTableViewHeader: UITableViewHeaderFooterView, Reusable {
     override func layoutSubviews() {
         super.layoutSubviews()
         textLabel?.text = self.textLabel?.text?.uppercased()
@@ -24,7 +24,7 @@ final class SettingsViewController: UIViewController {
     }
 
     /// The table view containing settings options.
-    @IBOutlet weak var tableView: UITableView?
+    @IBOutlet var tableView: UITableView!
 
     /// The settings to represent and display in this view controller.
     var optionList: [SettingNode]
@@ -56,17 +56,30 @@ final class SettingsViewController: UIViewController {
         setupStyle()
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        self.setNeedsStatusBarAppearanceUpdate()
+    }
+
     func setupView() {
-        tableView?.registerHeader(type: UppercasedTableViewHeader.self)
-        tableView?.registerCell(type: SettingsNormalCell.self)
-        tableView?.registerCell(type: SettingsSwitchCell.self)
-        tableView?.delegate = self
-        tableView?.dataSource = self
+        tableView.register(headerFooterViewType: UppercasedTableViewHeader.self)
+        tableView.register(cellType: SettingsNormalCell.self)
+        tableView.register(cellType: SettingsSwitchCell.self)
+        tableView.delegate = self
+        tableView.dataSource = self
     }
 
     func setupStyle() {
         let closeButton = navigationItem.rightBarButtonItem
         closeButton?.tintColor = .black
+    }
+
+    func clearCellAccessories() {
+        for index in 0...tableView.numberOfRows(inSection: 0) {
+            let indexPath = IndexPath(row: index, section: 0)
+            let cell = tableView.cellForRow(at: indexPath)
+            cell?.accessoryType = .none
+        }
     }
 
     @objc internal func dismissSettings(sender: UIBarButtonItem) {
@@ -86,6 +99,12 @@ extension SettingsViewController: UITableViewDataSource {
 
         if settingNode.enabled && settingNode.type == .normal {
             self.delegate?.selected(setting: settingNode, value: nil)
+        } else if settingNode.enabled && settingNode.type == .select {
+            self.delegate?.selected(setting: settingNode, value: nil)
+
+            clearCellAccessories()
+            let cell = tableView.cellForRow(at: indexPath)
+            cell?.accessoryType = .checkmark
         }
     }
 }
@@ -100,7 +119,7 @@ extension SettingsViewController: UITableViewDelegate {
             settingCell.update(for: setting)
 
             if let cellValue = delegate?.value(for: setting) {
-                settingCell.setValue(cellValue)
+                settingCell.setValue(node: setting, value: cellValue)
             }
         }
 
@@ -112,8 +131,8 @@ extension SettingsViewController: UITableViewDelegate {
     }
 
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let header: UppercasedTableViewHeader = tableView.dequeueReusableHeader()
-        header.textLabel?.text = optionList[section].name
+        let header: UppercasedTableViewHeader? = tableView.dequeueReusableHeaderFooterView()
+        header?.textLabel?.text = optionList[section].name
         return header
     }
 
@@ -147,6 +166,10 @@ extension SettingNode {
                 let switchCell: SettingsSwitchCell = tableView.dequeueReusableCell(for: indexPath)
                 switchCell.delegate = viewController
                 cell = switchCell
+            case .select:
+                let selectCell: SettingsNormalCell = tableView.dequeueReusableCell(for: indexPath)
+//                selectCell.delegate = viewController
+                cell = selectCell
             }
         }
 

@@ -9,12 +9,13 @@
 "MENU_OPTION_WALLETS" = "Wallets";
 "MENU_OPTION_TRADING" = "Trading";
 "MENU_OPTION_SETTINGS" = "Settings";
-"MENU_OPTION_P2P" = "Peer to Peer";
 
 "SETTINGS_SECTION_WALLET" = "Wallet";
 "SETTINGS_SECTION_SECURITY" = "Security";
 "SETTINGS_SECTION_ABOUT" = "About";
 "SETTINGS_SECTION_DEBUG" = "Debug";
+"SETTINGS_SECTION_SUPPORT" = "Support";
+"SETTINGS_SECTION_DEVELOPMENT" = "Development";
 
 "SETTINGS_OPTION_SEED_PHRASE" = "View Mnemonic Phrase";
 "SETTINGS_OPTION_CLEAR_WALLET" = "Clear Wallet";
@@ -36,6 +37,13 @@
 "SETTINGS_OPTION_PRIVATE_KEY" = "Private Key";
 "SETTINGS_OPTION_DISPLAY_SECRET_SEED" = "Display Seed Information";
 "SETTINGS_OPTION_EXPORT_KEYPAIR" = "Export Key Pair";
+"SETTINGS_OPTION_DIAGNOSTICS" = "Send Diagnostic";
+"SETTINGS_OPTION_INDEXING" = "Indexing Service";
+"SETTINGS_OPTION_MIMIC" = "Mimic Account";
+"SETTINGS_OPTION_NETWORK" = "Network";
+"SETTINGS_OPTION_NETWORK_PRODUCTION" = "Production";
+"SETTINGS_OPTION_NETWORK_TESTNET" = "Testnet";
+"SETTINGS_OPTION_NETWORK_CUSTOM" = "Custom";
 
 "BIOMETRIC_AUTH_TITLE" = "Unlock your wallet";
 "AUTHENTICATE_TITLE" = "Authenticate";
@@ -46,7 +54,6 @@
 "ITEM_SEND" = "Send";
 "TITLE_TAB_CONTACTS" = "Contacts";
 "TITLE_TAB_SETTINGS" = "Settings";
-"TITLE_TAB_P2P" = "P2P";
 
 "PIN_ENTER_TITLE" = "Please enter your PIN code";
 "PIN_CREATE_TITLE" = "Please create a PIN code";
@@ -58,6 +65,13 @@
 "CREATE_MNEMONIC_TWENTYFOUR" = "Use a 24-word recovery phrase";
 "RECOVER_WALLET" = "Recover Wallet";
 "REENTER_PHRASE" = "Re-enter Your Phrase";
+"MNEMONIC_PASSPHRASE_TITLE" = "Mnemonic Passphrase";
+"MNEMONIC_PASSPHRASE_MESSAGE" = "Enter a passphrase to protect your mnemonic";
+"CONFIRM_PASSPHRASE_TITLE" = "Confirm Passphrase";
+"CONFIRM_PASSPHRASE_MESSAGE" = "Please confirm your passphrase";
+
+"ENTER_PASSPHRASE_PLACEHOLDER" = "Enter Passphrase";
+"PASSPHRASE_SET" = "Mnemonic passphrase has been set";
 
 "RECOVER_SECRET_SEED" = "Recover with Stellar secret key";
 "RECOVER_MNEMONIC" = "Recover with mnemonic";
@@ -76,11 +90,10 @@
 "GENERIC_OK_TEXT" = "Ok";
 
 "ACTIVATION_ERROR_TITLE" = "Activation Error";
-"NO_BALANCE_ERROR_TITLE" = "No Balance Error";
-"PEER_ERROR_MESSAGE" = "Sorry this peer could not be added at this time. Please try again later.";
+"NO_BALANCE_ERROR_TITLE" = "Balance Error";
 "ASSET_ERROR_MESSAGE" = "Sorry your asset could not be added at this time. Please try again later.";
 "ASSET_BALANCE_ERROR_MESSAGE" = "Sorry your asset could not be added at this time. You may need to add more Lumens(XLM) to your wallet and try again as each action costs 0.5 XLM.";
-"LOW_BALANCE_ERROR_MESSAGE" = "You must have more than 1 Lumen (XLM) in order to perform this action.";
+"LOW_BALANCE_ERROR_MESSAGE" = "You must have a total balance of %@ Lumens (XLM) or greater in order to add a new asset.";
 
 "ASSET_REMOVE_ERROR_MESSAGE" = "Sorry your asset could not be removed at this time. Please try again later.";
 "TOKEN_ERROR_MESSAGE" = "Sorry your personal token could not be added at this time. Please try again later.";
@@ -91,29 +104,25 @@
 "TRANSACTION_ERROR_MESSAGE" = "There was an error processing this transaction. Please try again later.";
 "TRANSACTION_SUCCESS" = "Transaction successful.";
 
-"PEER_TO_PEER" = "Peer to Peer";
 "TOKEN_ADDRESS" = "Token Address";
-"TRUSTED_PEERS" = "Trusted Peers";
 "TRADE_SUBMITTED" = "Trade successfully submitted.";
 "TRADE_CURRENCY_PAIR_FORMAT" = "Trade %@ for %@";
 
+"PUBLIC_ADDRESS" = "Public Address";
+"FULL_NAME" = "Full Name";
 "NEW_WALLET" = "New Wallet";
 "MY_WALLET" = "My Wallet";
-"LUMEN_BALANCE" = "XLM Balance";
-"SECRET_PHRASE" = "Secret Phrase";
+"ASSET_BALANCE" = "Asset Balance";
+"SECRET_PHRASE" = "Mnemonic Phrase";
 "TOKEN_ADDRESS" = "Token Address";
 "YOUR_TOKEN_ADDRESS" = "Your Token Address";
 "YOUR_WALLET_ADDRESS" = "Your Wallet Address";
 "ADD_CONTACT" = "Add Contact";
-"UPDATE_CONTACT" = "Update Contact";
 "STELLAR" = "Stellar";
 "SELECT_ASSET" = "Select Asset";
 "NAVIGATE_BACK" = "Back";
 "SCANNING" = "Scanning...";
 "QR_DETECTED" = "Valid QR Code Found";
-"ADD_PEER" = "Add Peer";
-"ADDING_PEER" = "Adding Peer...";
-"PEER_ADDED" = "Peer successfully added.";
 "EXCHANGE_ADDRESS_PROMPT_FORMAT" = "This exchange address belongs to %@. Please enter a memo in order to send this transaction.";
 "REQUIRED_PLACEHOLDER" = "(Required)";
 "ADD_TRANSACTION" = "Add Transaction";
@@ -121,12 +130,17 @@
 "CREATING_TOKEN" = "Creating Token...";
 "CREATED_TOKEN" = "Person token successfully created.";
 "ASSETS" = "Assets";
-"ACTIVATE_ASSET" = "Activating Asset...";
-"REMOVE_ASSET" = "Removing Asset...";
+"ACTIVATING_ASSET" = "Activating Asset...";
+"REMOVING_ASSET" = "Removing Asset...";
+"CANCELLING_OFFER" = "Cancelling Offer...";
+"ADD_ASSET" = "Add Asset";
+"ADDING_ASSET" = "Adding Asset...";
+"CANCEL_TRADE_ERROR" = "Unable to cancel this trade. Please try again.";
 
 "SELL_SUMMARY_FORMAT" = "Sell %@ %@ for %@ %@ at a price of %@";
 "ADDRESS_COPIED" = "Your address has been successfully copied.";
-"APPINFO_FORMAT" = "@\nVersion: %@ (%@)";
+"VERSION_FORMAT" = "%@ (%@)";
+"APPINFO_FORMAT" = "%@\nVersion: %@";
 "BLOCKEQ_WEBSITE" = "BlockEQ Website";
 "COPY" = "Copy";
 
@@ -141,6 +155,8 @@
 "DISPLAY_SECRET_SEED_DESCRIPTION" = "This QR code represents your 56-character Stellar secret key. Please ensure you keep it safe!";
 "REVEAL_SECRET_SEED_INFORMATION" = "Reveal Secret Key";
 "CONCEAL_SECRET_SEED_INFORMATION" = "Conceal Secret Key";
+"REVEAL_MNEMONIC_INFORMATION" = "Reveal Mnemonic";
+"CONCEAL_MNEMONIC_INFORMATION" = "Conceal Mnemonic";
 "SECRET_SEED_PREFIX" = "Seed:";
 "MNEMONIC_PREFIX" = "Mnemonic:";
 "BLOCKEQ_WALLET" = "BlockEQ Wallet";
@@ -152,3 +168,155 @@
 "SUBMIT_TRADE_FORMAT" = "You are about to submit a trade of %@ %@ for %@ %@.";
 "TRADE_TITLE" = "Submit";
 "TRADE_SUBMITTING_MESSAGE" = "Placing Trade Offer...";
+"LEDGER_TITLE" = "Ledger";
+"TRANSACTION_TITLE" = "Transaction";
+"OPERATIONS_TITLE" = "Operations";
+"SIGNATURES_TITLE" = "Signatures";
+"SEND_TO_FORMAT" = "To: %@";
+"SENDING_PAYMENT" = "Sending Payment...";
+"SETTING_INFLATION_DESTINATION" = "Setting Inflation Destination...";
+"CLEARING_INFLATION_DESTINATION" = "Clearing Inflation Destination...";
+"INFLATION_SUCCESSFULLY_UPDATED" = "Inflation successfully updated.";
+"INVALID_DESTINATION_TITLE" = "Invalid Destination";
+"INFLATION_DESTINATION_INVALID" = "Unable to update the inflation destination to your own account, or the account it's already set to.";
+"CRYPTO_DUST_FORMAT_STRING" = "< %@";
+"AVAILABLE_BALANCE_FORMAT_STRING" = "Available: %@ %@";
+"MEMO_TITLE" = "Memo";
+"MEMO_TITLE_FORMAT_STRING" = "Memo (%@)";
+"XLM_FORMAT_STRING" = "%@ XLM";
+"TXID_COPIED" = "Transaction ID Copied";
+"OPERATION_ID_COPIED" = "Operation ID Copied";
+"SIGNER_COPIED" = "Public Signature Copied";
+"WALLET_DIAGNOSTICS_TITLE" = "Wallet Diagnostics";
+"DIAGNOSTIC_COMPLETE_TITLE" = "Diagnostic Complete";
+"DIAGNOSTIC_INCOMPLETE_TITLE" = "Diagnostic Incomplete";
+"WALLET_DIAGNOSTICS_DESCRIPTION" = "This tool collects non-private information about your wallet in order to help diagnose issues.";
+"WALLET_DIAGNOSTICS_DESCRIPTION_SHORT" = "Press the arrow below to transmit diagnostic data to BlockEQ.";
+"DIAGNOSTIC_COMPLETE_DESCRIPTION" = "When you contact BlockEQ for support, refer to your diagnostic ID below.";
+"DIAGNOSTIC_INCOMPLETE_DESCRIPTION" = "Your wallet diagnostic was unable to be sent. Please try again later.";
+"DIAGNOSTIC_ID_TITLE" = "Diagnostic ID";
+"DIAGNOSTIC_DATA_TITLE" = "Diagnostic Data";
+"ISSUE_SUMMARY" = "Issue Summary";
+"EMAIL_ADDRESS" = "Email Address";
+
+"OPERATION_CREATED_TITLE" = "Account Created";
+"OPERATION_MERGED_TITLE" = "Account Merged";
+"OPERATION_ATRUST_TITLE" = "Allow Trust";
+"OPERATION_BUMP_TITLE" = "Bump Sequence";
+"OPERATION_CTRUST_TITLE" = "Change Trust";
+"OPERATION_POFFER_TITLE" = "Passive Offer";
+"OPERATION_INFLATION_TITLE" = "Inflation";
+"OPERATION_MANAGEDATA_TITLE" = "Manage Data";
+"OPERATION_MOFFER_TITLE" = "Manage Offer";
+"OPERATION_PATHPAYMENT_TITLE" = "Path Payment";
+"OPERATION_PAYMENT_TITLE" = "Payment";
+"OPERATION_OPTIONS_TITLE" = "Set Options";
+
+"OPERATION_CREATED_DESCRIPTION" = "Account %@ created with starting balance %@ XLM ";
+"OPERATION_MERGED_DESCRIPTION" = "Account %@ merged with %@";
+"OPERATION_ATRUST_DESCRIPTION" = "%@ %@ to trust %@ from %@";
+"OPERATION_ALLOWTRUST" = "Allow";
+"OPERATION_DENYTRUST" = "Disallow";
+"OPERATION_CTRUST_DESCRIPTION" = "Changed trustline to %@ from %@";
+"OPERATION_MOFFER_DESCRIPTION" = "Created offer selling %@ for %@ at %@ %@";
+"OPERATION_PAYMENT_DESCRIPTION" = "Sent %@ to %@";
+"OPERATION_BUMP_DESCRIPTION" = "Unsupported";
+"OPERATION_POFFER_DESCRIPTION" = "Unsupported";
+"OPERATION_INFLATION_DESCRIPTION" = "Unsupported";
+"OPERATION_MANAGEDATA_DESCRIPTION" = "Unsupported";
+"OPERATION_PATHPAYMENT_DESCRIPTION" = "Unsupported";
+
+"OPERATION_OPTIONS_SET_INFLATION_DESCRIPTION" = "Inflation destination set to %@";
+"OPERATION_OPTIONS_SET_HOMEDOMAIN_DESCRIPTION" = "Home domain set to %@";
+"OPERATION_OPTIONS_SET_SIGNER_DESCRIPTION" = "%@ signer %@ with weight %@";
+
+"LOADING_TRANSACTION" = "Loading Transaction...";
+"SENDING_DIAGNOSTIC" = "Sending Diagnostic...";
+"FAILED_DIAGNOSTIC" = "Failed";
+
+"CONFIRMED_SECRET_TITLE" = "I have written it down";
+"ADVANCED_SECURITY_TITLE" = "Advanced Security";
+"MISMATCHED_PASSPHRASE_TITLE" = "Mismatched Phrase";
+"MISMATCHED_PASSPHRASE_MESSAGE" = "Your passphrase was not set because they didn't match. Please try again.";
+"INVALID_PASSPHRASE_TITLE" = "Invalid Phrase";
+"INVALID_PASSPHRASE_MESSAGE" = "That passphrase contains one or more disallowed characters. Please try again.";
+"PASSPHRASE_LABEL" = "Passphrase";
+
+"UNKNOWN_ERROR_TITLE" = "Unknown Error";
+"REQUEST_FAILED_ERROR_TITLE" = "No Network Connection";
+"BAD_REQUEST_ERROR_TITLE" = "Bad Request";
+"INVALID_RESPONSE_ERROR_TITLE" = "Invalid Response";
+"UNAUTHORIZED_ERROR_TITLE" = "Unauthorized";
+"FORBIDDEN_ERROR_TITLE" = "Forbidden";
+"NOT_FOUND_ERROR_TITLE" = "Not Found";
+"NOT_ACCEPTABLE_ERROR_TITLE" = "Not Acceptable";
+"BEFORE_HISTORY_ERROR_TITLE" = "Account Error";
+"RATE_LIMIT_ERROR_TITLE" = "Rate Limit";
+"INTERNAL_SERVER_ERROR_TITLE" = "Internal Server Error";
+"NOT_IMPLMENTED_ERROR_TITLE" = "Not Implemented";
+"STALE_HISTORY_ERROR_TITLE" = "Stale Data";
+"STREAM_ERROR_TITLE" = "Steam Error";
+"NO_ACCOUNT_ERROR_TITLE" = "Account Error";
+"ALREADY_INITIALIZED_ERROR_TITLE" = "Account Error";
+"KEYPAIR_CREATION_ERROR_TITLE" = "Key Error";
+"MIGRATION_FAILED_ERROR_TITLE" = "Migration Error";
+"POST_TRADE_ERROR_TITLE" = "Post Trade Error";
+"CANCEL_TRADE_ERROR_TITLE" = "Cancel Trade Error";
+"MISSING_KEYPAIR_ERROR_TITLE" = "Missing Keypair";
+
+"UNKNOWN_ERROR_MESSAGE" = "An unknown error has occured. If this issue persists, please contact support.";
+"REQUEST_FAILED_ERROR_MESSAGE" = "Your network connection appears to be offline. Please connect to a Wifi or cellular network to complete this operation.";
+"BAD_REQUEST_ERROR_MESSAGE" = "There was an error processing this request. If this issue persists, please contact support.";
+"INVALID_RESPONSE_ERROR_MESSAGE" = "The server returned an invalid and unprocessable response. Please contact BlockEQ support for assistance.";
+"UNAUTHORIZED_ERROR_MESSAGE" = "The requested action is unauthorized for this account.";
+"FORBIDDEN_ERROR_MESSAGE" = "The requested resource is forbidden.";
+"NOT_FOUND_ERROR_MESSAGE" = "The requested information cannot be retrieved because it wasn't found.";
+"NOT_ACCEPTABLE_ERROR_MESSAGE" = "The requested action is not acceptable.";
+"BEFORE_HISTORY_ERROR_MESSAGE" = "Horizon is unable to provide the required information, it is outside of the recorded history range.";
+"RATE_LIMIT_ERROR_MESSAGE" = "Rate limit reached. Please try again in a few minutes.";
+"INTERNAL_SERVER_ERROR_MESSAGE" = "There was an internal server error. Please try again, or contact support for assistance.";
+"NOT_IMPLMENTED_ERROR_MESSAGE" = "This feature has not been implemented.";
+"STALE_HISTORY_ERROR_MESSAGE" = "Could not fetch account history from Horizon, the requested data is out of date.";
+"STREAM_ERROR_MESSAGE" = "There was an error receiving Horizon stream data.";
+"NO_ACCOUNT_ERROR_MESSAGE" = "The target account could not be found. ";
+"ALREADY_INITIALIZED_ERROR_MESSAGE" = "There was a problem initializing your account. Please restart the application and try again.";
+"KEYPAIR_CREATION_ERROR_MESSAGE" = "Unable to generate a public and private key pair. If this issue persists, please contact support.";
+"MIGRATION_FAILED_ERROR_MESSAGE" = "Your account data cannot be migrated. Please contact BlockEQ support for assistance.";
+"POST_TRADE_ERROR_MESSAGE" = "Unable to post trade offer.";
+"CANCEL_TRADE_ERROR_MESSAGE" = "Unable to cancel trade offer.";
+"MISSING_KEYPAIR_ERROR_MESSAGE" = "There was a problem signing the requested transaction. If this issue persists, please contact support.";
+
+"TOTAL_BALANCE_TITLE" = "Total Balance";
+"AVAILABLE_BALANCE_TITLE" = "Available Balance";
+"BASE_AMOUNT_TITLE" = "Base Amount";
+"TRUSTLINES_TITLE" = "Trustlines";
+"OFFERS_TITLE" = "Open Offers";
+"SIGNERS_TITLE" = "Additional Signers";
+"OPEN_TRADES_TITLE" = "Posted for Trade";
+
+"BLOCKEQ_ASSET_TITLE" = "BlockEQ Assets";
+"NO_ASSETS_TITLE" = "No Wallet Assets";
+"NO_ASSETS_DESCRIPTION" = "When you add assets to your wallet, they will be displayed here.";
+"NOT_AVAILABLE_SHORTFORM" = "N/A";
+
+"ISSUER_TITLE_FORMAT" = "Issued by %@";
+"ASSET_NAME_TITLE" = "Asset Name";
+"DESCRIPTION_TITLE" = "Description";
+"NOTES_TITLE" = "Notes";
+"LUMEN_NOTES" = "Native means that lumens are built into the network, and asset is how the network refers to an item of value that is stored on the ledger. \n\nWhile you can’t hold a lumen in your hand, they are essential to the Stellar network—they contribute to the ability to move money around the world and to conduct transactions between different currencies quickly and securely.";
+"BALANCE_INFORMATION" = "Balance";
+"ISSUER_ADDRESS" = "Issuer Address";
+
+"TITLE_TITLE" = "Title";
+"AMOUNT_TITLE" = "Amount";
+"VALUE_TITLE" = "Value";
+"EMPTY_OFFERS" = "There are no open offers at the moment.";
+
+"NEW_ACCOUNT_INACTIVE" = "This account requires activation. Send at least 1 XLM to fund and activate the account.";
+"NEW_ACCOUNT_FUNDING_REQUIRED" = "Account Funding Required";
+"NEW_ACCOUNT_MINIMUM_BALANCE" = "Minimum Balance: 1.00 XLM";
+"EXISTING_ACCOUNT_REFRESHING" = "Refreshing Wallet";
+"EXISTING_ACCOUNT_UPDATING" = "Updating...";
+"EXISTING_ACCOUNT_INACTIVE" = "Fetching account transactions, please wait.";
+"CLEAR_WALLET_MESSAGE" = "Please clear your wallet and restart the application for the network switch to take effect.";
+"RESTART_REQUIRED" = "Restart Required";

@@ -6,47 +6,51 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
+import StellarHub
 import stellarsdk
-import Whisper
-
-import UIKit
-
-enum BalanceType: Double, RawRepresentable {
-    case ten = 0.1
-    case twentyFive = 0.25
-    case fifty = 0.50
-    case seventyFive = 0.75
-    case hundred = 1.0
-
-    var decimal: Decimal {
-        return Decimal(self.rawValue)
-    }
-
-    static var all: [BalanceType] {
-        return [.ten, .twentyFive, .fifty, .seventyFive, .hundred]
-    }
-}
-
-enum TradeType: Int {
-    case market
-    case limit
-
-    static var all: [TradeType] {
-        return [.market, .limit]
-    }
-}
 
 protocol TradeViewControllerDelegate: AnyObject {
-    func getOrderBook(sellingAsset: StellarAsset, buyingAsset: StellarAsset)
-    func displayNoAssetOverlay()
-    func hideNoAssetOverlay()
-    func update(stellarAccount: StellarAccount)
-    func displayAddAssetForTrade()
+    func getOrderBook(for pair: StellarAssetPair)
+    func requestedRefresh()
+    func availableBalance(for asset: StellarAsset) -> Decimal
+    func scaledBalance(type: TradeViewController.BalanceType) -> Decimal
+    func requestTrade(type: StellarTradeOfferData.TradeType,
+                      toAmount: String,
+                      fromAmount: String,
+                      numerator: Decimal,
+                      denominator: Decimal)
 }
 
-//swiftlint:disable file_length type_body_length
-class TradeViewController: UIViewController {
-    @IBOutlet var addAssetButton: UIButton!
+extension TradeViewController {
+    enum BalanceType: Double, RawRepresentable, CaseIterable {
+        case ten = 0.1
+        case twentyFive = 0.25
+        case fifty = 0.50
+        case seventyFive = 0.75
+        case hundred = 1.0
+
+        var decimal: Decimal {
+            return Decimal(self.rawValue)
+        }
+    }
+
+    enum TradeType: Int {
+        case market
+        case limit
+
+        static var all: [TradeType] {
+            return [.market, .limit]
+        }
+    }
+
+    enum TradeField {
+        case fromAsset
+        case toAsset
+        case firstTimeAdd
+    }
+}
+
+final class TradeViewController: UIViewController {
     @IBOutlet var arrowImageView: UIImageView!
     @IBOutlet var balanceLabel: UILabel!
     @IBOutlet var buttonHolderView: UIView!
@@ -62,35 +66,160 @@ class TradeViewController: UIViewController {
     @IBOutlet var tradeToTextField: UITextField!
     @IBOutlet var tradeFromSelectorTextField: UITextField!
     @IBOutlet var tradeToSelectorTextField: UITextField!
-    @IBOutlet var tradeFromInputAccessoryView: UIView!
-    @IBOutlet var tradeToInputAccessoryView: UIView!
-    @IBOutlet var tradeFromSelectorAccessoryInputView: UIView!
-    @IBOutlet var tradeToSelectorAccessoryInputView: UIView!
-
-    let tradeFromPickerView = UIPickerView()
-    let tradeToPickerView = UIPickerView()
-    var stellarAccount = StellarAccount()
-    var toAssets: [StellarAsset] = []
-    var fromAsset: StellarAsset!
-    var toAsset: StellarAsset!
-    var currentTradeType: TradeType = .market
-    var currentMarketPrice: Double = 0.0
+    @IBOutlet var tradeTextInputAccessoryView: UIView!
 
     weak var delegate: TradeViewControllerDelegate?
+    weak var assetDelegate: TradeAssetListDisplayable?
 
-    @IBAction func setBalanceAmount(sender: UIButton) {
-        guard var balance = Decimal(string: fromAsset.balance) else {
+    var currentTradeType: StellarTradeOfferData.TradeType = .market
+
+    var currentMarketPrice: Decimal = 0.0
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupView()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        view.endEditing(true)
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        delegate?.requestedRefresh()
+    }
+
+    func setupView() {
+        tradeFromView.layer.borderWidth = 0.5
+        tradeFromView.layer.borderColor = Colors.red.cgColor
+
+        tradeToView.layer.borderWidth = 0.5
+        tradeToView.layer.borderColor = Colors.green.cgColor
+
+        balanceLabel.textColor = Colors.darkGray
+        arrowImageView.tintColor = Colors.lightGray
+        marketLabelHolderView.backgroundColor = Colors.lightBackground
+        segmentControl.tintColor = Colors.lightGray
+        tableview.backgroundColor = Colors.lightBackground
+        tradeFromButton.backgroundColor = Colors.red
+        tradeToButton.backgroundColor = Colors.green
+        tradeFromTextField.textColor = Colors.darkGray
+        tradeToTextField.textColor = Colors.darkGray
+        view.backgroundColor = Colors.lightBackground
+
+        tradeFromTextField.inputAccessoryView = tradeTextInputAccessoryView
+        tradeToTextField.inputAccessoryView = tradeTextInputAccessoryView
+
+        let selectedTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
+        let deselectedTextAttributes = [NSAttributedString.Key.foregroundColor: Colors.darkGray]
+        segmentControl.setTitleTextAttributes(deselectedTextAttributes, for: .normal)
+        segmentControl.setTitleTextAttributes(selectedTextAttributes, for: .selected)
+        segmentControl.tintColor = Colors.primaryDark
+
+        for subview in buttonHolderView.subviews {
+            if let button = subview as? UIButton {
+                button.backgroundColor = Colors.lightGrayTransparent
+                button.setTitleColor(Colors.darkGray, for: .normal)
+            }
+        }
+
+        setTradeViews()
+    }
+
+    func refreshView(pair: StellarAssetPair?) {
+        guard self.isViewLoaded else {
             return
         }
 
-        if fromAsset.isNative {
-            balance = Decimal(stellarAccount.availableBalance)
+        setTradeSelectors(assetPair: pair)
+        updateBalances(assetPair: pair)
+
+        if self.currentTradeType == .market, let tradeFromText = tradeFromTextField.text {
+            setCalculatedMarketPrice(tradeFromText: tradeFromText)
+        }
+    }
+
+    func setTradeViews() {
+        switch currentTradeType {
+        case .market:
+            tradeToTextField.isEnabled = false
+            tradeToView.backgroundColor = Colors.lightBackground
+            if let tradeFromText = tradeFromTextField.text {
+                setCalculatedMarketPrice(tradeFromText: tradeFromText)
+            }
+            marketLabel.text = "TRADE_MARKET_INFO".localized()
+        case .limit:
+            tradeToTextField.isEnabled = true
+            tradeToView.backgroundColor = Colors.white
+            marketLabel.text = ""
+        }
+    }
+
+    func setTradeSelectors(assetPair: StellarAssetPair?) {
+        if let fromAsset = assetPair?.selling, let balance = delegate?.availableBalance(for: fromAsset) {
+            let formatString = fromAsset.isNative ? "TRADE_BALANCE_AVAILABLE_FORMAT" : "TRADE_BALANCE_FORMAT"
+            let balanceString = balance.tradeFormattedString
+            tradeFromButton.setTitle(fromAsset.shortCode, for: .normal)
+            balanceLabel.text = String(format: formatString.localized(), balanceString, fromAsset.shortCode)
         }
 
-        let multiplier = BalanceType.all[sender.tag].decimal
-        let scaledBalance = balance * multiplier
+        if let toAsset = assetPair?.buying {
+            tradeToButton.setTitle(toAsset.shortCode, for: .normal)
+        }
+    }
 
-        let value = scaledBalance.displayFormattedString
+    func updateBalances(assetPair: StellarAssetPair?) {
+        if let fromAsset = assetPair?.selling, let balance = delegate?.availableBalance(for: fromAsset) {
+            let balanceString = balance.tradeFormattedString
+            let labelFormat = fromAsset.isNative ? "TRADE_BALANCE_AVAILABLE_FORMAT" : "TRADE_BALANCE_FORMAT"
+            self.balanceLabel.text = String(format: labelFormat.localized(), balanceString, fromAsset.shortCode)
+        }
+    }
+
+    func setMarketPrice(orderbook: StellarOrderbook, assetPair: StellarAssetPair?) {
+        guard let bestPrice = orderbook.bestPrice else {
+            return
+        }
+
+        currentMarketPrice = bestPrice
+        self.refreshView(pair: assetPair)
+    }
+
+    func setCalculatedMarketPrice(tradeFromText: String) {
+        guard let tradeFromValue = Decimal(string: tradeFromText) else {
+            return
+        }
+
+        let toValue = tradeFromValue * currentMarketPrice
+        tradeToTextField.text = toValue.tradeFormattedString
+    }
+
+    func clearTradeFields() {
+        self.tradeFromTextField.text = ""
+        self.tradeToTextField.text = ""
+    }
+}
+
+// MARK: - IBActions
+extension TradeViewController {
+    @IBAction func dismissKeyboard() {
+        view.endEditing(true)
+    }
+
+    @IBAction func tradeFromSelected() {
+        assetDelegate?.requestedDisplayAssetList(for: .fromAsset)
+    }
+
+    @IBAction func tradeToSelected() {
+        assetDelegate?.requestedDisplayAssetList(for: .toAsset)
+    }
+
+    @IBAction func setBalanceAmount(sender: UIButton) {
+        let type = BalanceType.allCases[sender.tag]
+
+        guard let scaledBalance = delegate?.scaledBalance(type: type) else { return }
+        let value = scaledBalance.tradeFormattedString
         tradeFromTextField.text = value
 
         if currentTradeType == .market {
@@ -98,12 +227,8 @@ class TradeViewController: UIViewController {
         }
     }
 
-    @IBAction func addAsset() {
-        delegate?.displayAddAssetForTrade()
-    }
-
     @IBAction func tradeTypeSwitched(sender: UISegmentedControl) {
-        currentTradeType = TradeType.all[sender.selectedSegmentIndex]
+        currentTradeType = StellarTradeOfferData.TradeType.all[sender.selectedSegmentIndex]
         setTradeViews()
     }
 
@@ -141,355 +266,13 @@ class TradeViewController: UIViewController {
 
         dismissKeyboard()
 
-        let alertMessage = String(format: "SUBMIT_TRADE_FORMAT".localized(),
-                                  tradeFromAmount, fromAsset.shortCode, tradeToAmount, toAsset.shortCode)
-
-        let cancelAction = UIAlertAction(title: "CANCEL_ACTION".localized(), style: .cancel, handler: nil)
-        let submitAction = UIAlertAction(title: "TRADE_TITLE".localized(), style: .default, handler: { _ in
-            self.showHud()
-
-            TradeOperation.postTrade(tradePrice: (numerator: numerator, denominator: denominator),
-                                     assets: (selling: self.fromAsset, buying: self.toAsset),
-                                     type: self.currentTradeType) { completed in
-                self.hideHud()
-                self.getOrderBook()
-                self.updateBalance()
-
-                if !completed {
-                    self.displayTradeError(message: "TRADE_ERROR_MESSAGE".localized())
-                } else {
-                    self.tradeFromTextField.text = ""
-                    self.tradeToTextField.text = ""
-                    self.displayTradeSuccess()
-                }
-            }
-        })
-
-        let alert = UIAlertController(title: "SUBMIT_TRADE_TITLE".localized(),
-                                      message: alertMessage,
-                                      preferredStyle: .alert)
-
-        alert.addAction(cancelAction)
-        alert.addAction(submitAction)
-
-        self.present(alert, animated: true, completion: nil)
-    }
-
-    func displayTradeError(message: String) {
-        let alert = UIAlertController(title: "TRADE_ERROR_TITLE".localized(),
-                                      message: message,
-                                      preferredStyle: .alert)
-
-        alert.addAction(UIAlertAction(title: "GENERIC_OK_TEXT".localized(),
-                                      style: .default,
-                                      handler: nil))
-
-        self.present(alert, animated: true, completion: nil)
-    }
-
-    func displayTradeSuccess() {
-        let message = Message(title: "TRADE_SUBMITTED".localized(), backgroundColor: Colors.green)
-        Whisper.show(whisper: message, to: navigationController!, action: .show)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            Whisper.hide(whisperFrom: self.navigationController!)
-        }
-    }
-
-    @IBAction func tradeFromSelected() {
-        tradeFromSelectorTextField.becomeFirstResponder()
-    }
-
-    @IBAction func tradeToSelected() {
-        tradeToSelectorTextField.becomeFirstResponder()
-    }
-
-    @IBAction func dismissKeyboard() {
-        view.endEditing(true)
-    }
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        setupView()
-    }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        getAccountDetails()
-    }
-
-    func setupView() {
-        tradeFromView.layer.borderWidth = 0.5
-        tradeFromView.layer.borderColor = Colors.red.cgColor
-
-        tradeToView.layer.borderWidth = 0.5
-        tradeToView.layer.borderColor = Colors.green.cgColor
-
-        balanceLabel.textColor = Colors.darkGray
-        arrowImageView.tintColor = Colors.lightGray
-        addAssetButton.backgroundColor = Colors.primaryDark
-        marketLabelHolderView.backgroundColor = Colors.lightBackground
-        segmentControl.tintColor = Colors.lightGray
-        tableview.backgroundColor = Colors.lightBackground
-        tradeFromButton.backgroundColor = Colors.red
-        tradeToButton.backgroundColor = Colors.green
-        tradeFromTextField.textColor = Colors.darkGray
-        tradeToTextField.textColor = Colors.darkGray
-        view.backgroundColor = Colors.lightBackground
-
-        let titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.black]
-        segmentControl.setTitleTextAttributes(titleTextAttributes, for: .normal)
-        segmentControl.setTitleTextAttributes(titleTextAttributes, for: .selected)
-
-        for subview in buttonHolderView.subviews {
-            if let button = subview as? UIButton {
-                button.backgroundColor = Colors.lightGrayTransparent
-                button.setTitleColor(Colors.darkGray, for: .normal)
-            }
-        }
-
-        tradeFromPickerView.dataSource = self
-        tradeFromPickerView.delegate = self
-
-        tradeToPickerView.dataSource = self
-        tradeToPickerView.delegate = self
-
-        tradeFromTextField.inputAccessoryView = tradeFromInputAccessoryView
-        tradeToTextField.inputAccessoryView = tradeToInputAccessoryView
-        tradeFromSelectorTextField.inputAccessoryView = tradeFromSelectorAccessoryInputView
-        tradeToSelectorTextField.inputAccessoryView = tradeToSelectorAccessoryInputView
-
-        tradeFromSelectorTextField.inputView = tradeFromPickerView
-        tradeToSelectorTextField.inputView = tradeToPickerView
-
-        setTradeViews()
-    }
-
-    func setTradeViews() {
-        switch currentTradeType {
-        case .market:
-            tradeToTextField.isEnabled = false
-            tradeToView.backgroundColor = Colors.lightBackground
-            if let tradeFromText = tradeFromTextField.text {
-                setCalculatedMarketPrice(tradeFromText: tradeFromText)
-            }
-            marketLabel.text = "TRADE_MARKET_INFO".localized()
-        case .limit:
-            tradeToTextField.isEnabled = true
-            tradeToView.backgroundColor = Colors.white
-            marketLabel.text = ""
-        }
-    }
-
-    func setTradeSelectors(fromAsset: StellarAsset?, toAsset: StellarAsset?) {
-        if let selectedFromAsset = fromAsset {
-            self.fromAsset = selectedFromAsset
-            setTradeFromSelector()
-            getOrderBook()
-            return
-        }
-
-        if let selectedToAsset = toAsset {
-            self.toAsset = selectedToAsset
-            setTradeToSelector()
-            getOrderBook()
-            return
-        }
-    }
-
-    func getOrderBook() {
-        if let sellingAsset = fromAsset, let buyingAsset = toAsset {
-            delegate?.getOrderBook(sellingAsset: sellingAsset, buyingAsset: buyingAsset)
-        }
-    }
-
-    func setTradeFromSelector() {
-        guard let removableIndex = self.stellarAccount.assets.index(of: fromAsset) else {
-            return
-        }
-
-        var formatString = "TRADE_BALANCE_FORMAT"
-        var balanceAmount = fromAsset.balance.decimalFormatted
-
-        if fromAsset.isNative {
-            formatString = "TRADE_BALANCE_AVAILABLE_FORMAT"
-            balanceAmount = stellarAccount.availableBalance.displayFormattedString
-        }
-
-        tradeFromButton.setTitle(fromAsset.shortCode, for: .normal)
-        balanceLabel.text = String(format: formatString.localized(), balanceAmount, fromAsset.shortCode)
-
-        toAssets = self.stellarAccount.assets
-        toAssets.remove(at: removableIndex)
-        toAsset = toAssets[0]
-        tradeToButton.setTitle(toAsset.shortCode, for: .normal)
-
-        tradeFromPickerView.reloadAllComponents()
-        tradeToPickerView.reloadAllComponents()
-        tradeToPickerView.selectRow(0, inComponent: 0, animated: false)
-    }
-
-    func setTradeToSelector() {
-        if let fromButtonText = tradeFromButton.titleLabel?.text, !fromButtonText.elementsEqual(toAsset.shortCode) {
-            tradeToButton.setTitle(toAsset.shortCode, for: .normal)
-            return
-        }
-
-        var toAssetToRemove: StellarAsset!
-
-        for asset in self.stellarAccount.assets where tradeFromButton.titleLabel?.text != asset.shortCode {
-            fromAsset = asset
-            tradeFromButton.setTitle(fromAsset.shortCode, for: .normal)
-            balanceLabel.text = "\(fromAsset.balance.decimalFormatted) \(fromAsset.shortCode)"
-            toAssetToRemove = fromAsset
-        }
-
-        guard let removableToAsset = toAssetToRemove,
-            let removableIndex = self.stellarAccount.assets.index(of: removableToAsset) else {
-            return
-        }
-
-        tradeToButton.setTitle(toAsset.shortCode, for: .normal)
-
-        toAssets = self.stellarAccount.assets
-        toAssets.remove(at: removableIndex)
-
-        tradeFromPickerView.reloadAllComponents()
-        tradeToPickerView.reloadAllComponents()
-
-        tradeFromPickerView.selectRow(0, inComponent: 0, animated: false)
-    }
-
-    func showHud() {
-        let hud = MBProgressHUD.showAdded(to: (navigationController?.view)!, animated: true)
-        hud.label.text = "TRADE_SUBMITTING_MESSAGE".localized()
-        hud.mode = .indeterminate
-    }
-
-    func hideHud() {
-        MBProgressHUD.hide(for: (navigationController?.view)!, animated: true)
-    }
-
-    func setMarketPrice(orderBook: OrderbookResponse) {
-        if orderBook.bids.count > 0 {
-            guard let bestPrice = Double(orderBook.bids[0].price) else {
-                return
-            }
-
-            currentMarketPrice = bestPrice
-        }
-
-        if let tradeFromText = tradeFromTextField.text {
-            setCalculatedMarketPrice(tradeFromText: tradeFromText)
-        }
-    }
-
-    func setCalculatedMarketPrice(tradeFromText: String) {
-        guard let tradeFromValue = Double(tradeFromText) else {
-            return
-        }
-
-        let toValue = tradeFromValue * currentMarketPrice
-        tradeToTextField.text = toValue.displayFormattedString
+        delegate?.requestTrade(type: currentTradeType,
+                               toAmount: tradeToAmount,
+                               fromAmount: tradeFromAmount,
+                               numerator: numerator,
+                               denominator: denominator)
     }
 }
 
-extension TradeViewController: UIPickerViewDataSource {
-    func numberOfComponents(in pickerView: UIPickerView) -> Int {
-        return 1
-    }
-
-    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
-        if pickerView == tradeFromPickerView {
-            return stellarAccount.assets.count
-        }
-        return toAssets.count
-    }
-
-    func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
-        if pickerView == tradeFromPickerView {
-            setTradeSelectors(fromAsset: stellarAccount.assets[row], toAsset: nil)
-            return
-        }
-        setTradeSelectors(fromAsset: nil, toAsset: toAssets[row])
-    }
-}
-
-extension TradeViewController: UIPickerViewDelegate {
-    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
-        let formatString = "%@ (%@)"
-        if pickerView == tradeFromPickerView {
-            return String(format: formatString,
-                          Assets.displayTitle(shortCode: stellarAccount.assets[row].shortCode),
-                          stellarAccount.assets[row].shortCode)
-        }
-
-        return String(format: formatString,
-               Assets.displayTitle(shortCode: toAssets[row].shortCode),
-               toAssets[row].shortCode)
-    }
-}
-
-/*
- * Operations
- */
-extension TradeViewController {
-    func getAccountDetails() {
-        guard let accountId = KeychainHelper.accountId else {
-            return
-        }
-
-        AccountOperation.getAccountDetails(accountId: accountId) { responseAccounts in
-            if !responseAccounts.isEmpty && responseAccounts[0].assets.count > 1 {
-                self.stellarAccount = responseAccounts[0]
-                if self.fromAsset == nil {
-                    self.setTradeSelectors(fromAsset: self.stellarAccount.assets[0], toAsset: nil)
-                }
-
-                self.delegate?.update(stellarAccount: self.stellarAccount)
-                self.delegate?.hideNoAssetOverlay()
-            } else {
-                let account = StellarAccount()
-                account.accountId = accountId
-
-                let stellarAsset = StellarAsset(assetType: AssetTypeAsString.NATIVE,
-                                                assetCode: nil,
-                                                assetIssuer: nil,
-                                                balance: "0.0000")
-
-                account.assets.removeAll()
-                account.assets.append(stellarAsset)
-
-                self.stellarAccount = account
-                self.delegate?.update(stellarAccount: account)
-                self.delegate?.displayNoAssetOverlay()
-            }
-        }
-    }
-
-    func updateBalance() {
-        guard let accountId = KeychainHelper.accountId else {
-            return
-        }
-
-        AccountOperation.getAccountDetails(accountId: accountId) { responseAccounts in
-            if !responseAccounts.isEmpty && responseAccounts[0].assets.count > 1 {
-                self.stellarAccount = responseAccounts[0]
-                for asset in self.stellarAccount.assets where asset == self.fromAsset {
-                    self.fromAsset = asset
-                    var balance = asset.balance
-                    var labelFormat = "TRADE_BALANCE_FORMAT".localized()
-
-                    if asset.isNative {
-                        labelFormat = "TRADE_BALANCE_AVAILABLE_FORMAT".localized()
-                        balance = self.stellarAccount.availableBalance.displayFormattedString
-                    }
-
-                    self.balanceLabel.text = String(format: labelFormat, balance, asset.shortCode)
-                    break
-                }
-            }
-        }
-    }
-}
-//swiftlint:enable file_length type_body_length
+// MARK: - FrameworkErrorPresentable
+extension TradeViewController: FrameworkErrorPresentable { }

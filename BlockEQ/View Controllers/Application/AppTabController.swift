@@ -13,7 +13,6 @@ enum ApplicationTab: Int {
     case trading
     case settings
     case contacts
-    case p2p
 
     var tabBarItem: UITabBarItem {
         return UITabBarItem(title: title,
@@ -27,7 +26,6 @@ enum ApplicationTab: Int {
         case .trading: return "TITLE_TAB_TRADING".localized()
         case .contacts: return "TITLE_TAB_CONTACTS".localized()
         case .settings: return "TITLE_TAB_SETTINGS".localized()
-        case .p2p: return "TITLE_TAB_P2P".localized()
         }
     }
 
@@ -38,7 +36,6 @@ enum ApplicationTab: Int {
         case .trading: image = UIImage(named: "trading")
         case .contacts: image = UIImage(named: "contact")
         case .settings: image = UIImage(named: "settings")
-        case .p2p: image = UIImage(named: "settings")
         }
 
         return image!
@@ -51,7 +48,6 @@ enum ApplicationTab: Int {
         case .trading: image = UIImage(named: "trading")
         case .contacts: image = UIImage(named: "contact")
         case .settings: image = UIImage(named: "settings")
-        case .p2p: image = UIImage(named: "settings")
         }
 
         return image!
@@ -162,9 +158,11 @@ final class AppTabController: ContainerViewController {
         }
 
         addChild(viewController)
+        viewController.willMove(toParent: self)
+
         container.addSubview(viewController.view)
-        viewController.didMove(toParent: self)
         viewController.view.frame = container.bounds
+
         currentViewController = viewController
 
         self.setNeedsStatusBarAppearanceUpdate()

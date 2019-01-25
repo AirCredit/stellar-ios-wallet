@@ -48,18 +48,6 @@ class PinViewController: UIViewController {
         return .default
     }
 
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
-
-    init(mode: DisplayMode, creating: Bool, isCloseDisplayed: Bool) {
-        super.init(nibName: String(describing: PinViewController.self), bundle: nil)
-        self.pin = ""
-        self.isCreating = creating
-        self.isCloseDisplayed = isCloseDisplayed
-        self.mode = mode
-    }
-
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
@@ -68,7 +56,7 @@ class PinViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        UIApplication.shared.statusBarStyle = .lightContent
+        keyboardView.isUserInteractionEnabled = true
         impactGenerator.prepare()
 
         var pinDotColor: UIColor
@@ -107,39 +95,16 @@ class PinViewController: UIViewController {
             pinView.update(with: viewModel)
             pinView.reset()
         }
+
+        setNeedsStatusBarAppearanceUpdate()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-
-        UIApplication.shared.statusBarStyle = .default
+        pin = ""
     }
 
     func setupView() {
-        if self.mode == .dark {
-            pinViewHolder.backgroundColor = Colors.backgroundDark
-            view.backgroundColor = Colors.backgroundDark
-            titleLabel.textColor = Colors.white
-        } else {
-            pinViewHolder.backgroundColor = .white
-            view.backgroundColor = .white
-            titleLabel.textColor = Colors.primaryDark
-        }
-
-        var longTitle: String
-        var shortTitle: String
-        if isCreating {
-            longTitle = "PIN_CREATE_TITLE".localized()
-            shortTitle = "PIN_CREATE_SHORT".localized()
-        } else {
-            longTitle = "PIN_ENTER_TITLE".localized()
-            shortTitle = "PIN_CONFIRM_SHORT".localized()
-        }
-
-        titleLabel.text = longTitle
-        title = shortTitle
-        navigationItem.title = shortTitle
-
         logoImageView.image = UIImage(named: "logo")
 
         if isCloseDisplayed {
@@ -156,6 +121,37 @@ class PinViewController: UIViewController {
         }
 
         keyboardView.delegate = self
+    }
+
+    func update(with viewModel: ViewModel) {
+        self.mode = viewModel.mode
+        self.isCreating = viewModel.isCreating
+        self.isCloseDisplayed = viewModel.isCloseDisplayed
+
+        if self.mode == .dark {
+            pinViewHolder.backgroundColor = Colors.backgroundDark
+            view.backgroundColor = Colors.backgroundDark
+            titleLabel.textColor = Colors.white
+        } else {
+            pinViewHolder.backgroundColor = .white
+            view.backgroundColor = .white
+            titleLabel.textColor = Colors.primaryDark
+        }
+
+        var longTitle: String
+        var shortTitle: String
+
+        if isCreating {
+            longTitle = "PIN_CREATE_TITLE".localized()
+            shortTitle = "PIN_CREATE_SHORT".localized()
+        } else {
+            longTitle = "PIN_ENTER_TITLE".localized()
+            shortTitle = "PIN_CONFIRM_SHORT".localized()
+        }
+
+        titleLabel.text = longTitle
+        title = shortTitle
+        navigationItem.title = shortTitle
     }
 
     @objc func dismissView() {
@@ -177,8 +173,17 @@ class PinViewController: UIViewController {
         for pinView in pinViews {
             pinView.shake {
                 pinView.animateToLine()
+                self.keyboardView.isUserInteractionEnabled = true
             }
         }
+    }
+}
+
+extension PinViewController {
+    struct ViewModel {
+        var isCreating: Bool
+        var isCloseDisplayed: Bool
+        var mode: DisplayMode
     }
 }
 
@@ -207,6 +212,7 @@ extension PinViewController: KeyboardViewDelegate {
         }
 
         if pin.count == PinViewController.pinLength {
+            keyboardView.isUserInteractionEnabled = false
             notificationGenerator.prepare()
 
             DispatchQueue.main.asyncAfter(deadline: .now() + PinViewController.pinCheckDelay) {

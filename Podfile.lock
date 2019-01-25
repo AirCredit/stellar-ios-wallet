@@ -1,50 +1,80 @@
 PODS:
-  - Alamofire (4.7.3)
+  - Alamofire (4.8.1)
+  - Cache (5.2.0)
+  - Imaginary (4.2.0):
+    - Cache (~> 5.0)
   - KeychainSwift (10.0.0)
-  - Kingfisher (4.10.0)
+  - Repeat (0.5.7)
+  - Reusable (4.0.5):
+    - Reusable/Storyboard (= 4.0.5)
+    - Reusable/View (= 4.0.5)
+  - Reusable/Storyboard (4.0.5)
+  - Reusable/View (4.0.5)
   - SCLAlertView (0.8.1)
-  - stellar-ios-mac-sdk (1.4.7)
+  - SnapshotTesting (1.1.0)
+  - stellar-ios-mac-sdk (1.5.7)
   - Whisper (6.0.2)
 
 DEPENDENCIES:
   - Alamofire (~> 4.7)
+  - Cache (~> 5.2)
+  - Imaginary (from `https://github.com/hyperoslo/Imaginary.git`, branch `master`)
   - KeychainSwift (~> 10.0)
-  - Kingfisher (~> 4.10)
+  - Repeat (~> 0.5)
+  - Reusable (~> 4.0)
   - SCLAlertView (from `https://github.com/vikmeup/SCLAlertView-Swift`, branch `master`)
-  - stellar-ios-mac-sdk (~> 1.4.7)
+  - SnapshotTesting
+  - stellar-ios-mac-sdk (from `https://github.com/Soneso/stellar-ios-mac-sdk.git`)
   - Whisper (from `https://github.com/freeubi/Whisper.git`, branch `swift-4.2-support`)
 
 SPEC REPOS:
   https://github.com/cocoapods/specs.git:
     - Alamofire
+    - Cache
     - KeychainSwift
-    - Kingfisher
-    - stellar-ios-mac-sdk
+    - Repeat
+    - Reusable
+    - SnapshotTesting
 
 EXTERNAL SOURCES:
+  Imaginary:
+    :branch: master
+    :git: https://github.com/hyperoslo/Imaginary.git
   SCLAlertView:
     :branch: master
     :git: https://github.com/vikmeup/SCLAlertView-Swift
+  stellar-ios-mac-sdk:
+    :git: https://github.com/Soneso/stellar-ios-mac-sdk.git
   Whisper:
     :branch: swift-4.2-support
     :git: https://github.com/freeubi/Whisper.git
 
 CHECKOUT OPTIONS:
+  Imaginary:
+    :commit: a56a54daafe2b3ab6d8e57df12068d96b77b3cba
+    :git: https://github.com/hyperoslo/Imaginary.git
   SCLAlertView:
-    :commit: d371170ca2e276462ff229e675a2d2020ad2bb72
+    :commit: 86ea7613c99cd4896765fabfa773b39b40bc8590
     :git: https://github.com/vikmeup/SCLAlertView-Swift
+  stellar-ios-mac-sdk:
+    :commit: 600d39b633f6227dd908a7b8b9638925a36dbd42
+    :git: https://github.com/Soneso/stellar-ios-mac-sdk.git
   Whisper:
     :commit: 86880dea149a871ec5cb909cc3b93e7fb5804788
     :git: https://github.com/freeubi/Whisper.git
 
 SPEC CHECKSUMS:
-  Alamofire: c7287b6e5d7da964a70935e5db17046b7fde6568
+  Alamofire: 16ce2c353fb72865124ddae8a57c5942388f4f11
+  Cache: 807c5d86d01a177f06ede9865add3aea269bbfd4
+  Imaginary: dae33d06dbc2ada22f98afef5eb45cc061311a2c
   KeychainSwift: f9f7910449a0c0fd2cabc889121530dd2c477c33
-  Kingfisher: 43c4b802d8b5256cf1f4379e9cd10b329be6d3e2
+  Repeat: 73c5ee602aed8f3c7bf1aa12d4cd0d3dc3edea0a
+  Reusable: 188be1a54ac0691bc66e5bb24ec6eb91971b315b
   SCLAlertView: 9fea8ac145c0bd4989ef6abe1d3859b48f458986
-  stellar-ios-mac-sdk: 112012a49569b60afaa38dea99bf914d7ac9a32c
+  SnapshotTesting: 8ed6a4dceee63f59a60e1bc86f9adbba54eb9287
+  stellar-ios-mac-sdk: 7a49cbb604d6ec8e0e3fefddf34d0d9340db2f1c
   Whisper: 8c499b08f3b56d5c80162d775e3462318ad7f4fe
 
-PODFILE CHECKSUM: 3e8687f3710aeb3aebab6132c0834848718eb99b
+PODFILE CHECKSUM: a20b2a55a46db8619698bfc60bab052b3593e01e
 
-COCOAPODS: 1.5.3
+COCOAPODS: 1.6.0.beta.2

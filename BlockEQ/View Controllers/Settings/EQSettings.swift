@@ -10,13 +10,38 @@ import Foundation
 
 /// The settings that should appear in the settings menu for BlockEQ.
 struct EQSettings {
+    static let settingsBundleDevelopmentKey = "setting.development-mode"
+
     /// This initalizer populates options based on the scheme selected. Debug options are only included in debug builds.
     static var options: [SettingNode] {
+        var mutableOptions = [walletSection, securitySection, supportSection, aboutSection]
+
+        if UserDefaults.standard.bool(forKey: EQSettings.settingsBundleDevelopmentKey) {
+            mutableOptions.append(developmentSection)
+        }
+
         #if DEBUG
-        return [walletSection, securitySection, aboutSection]
-        #else
-        return [walletSection, securitySection, aboutSection]
+        mutableOptions.append(debugSection)
         #endif
+
+        return mutableOptions
+    }
+
+    static var networkItems: [SettingNode] {
+        return [
+            SettingNode.node(name: "SETTINGS_OPTION_NETWORK_PRODUCTION".localized(),
+                             identifier: "network-production",
+                             enabled: true,
+                             type: .select),
+            SettingNode.node(name: "SETTINGS_OPTION_NETWORK_TESTNET".localized(),
+                             identifier: "network-testnet",
+                             enabled: true,
+                             type: .select),
+            SettingNode.node(name: "SETTINGS_OPTION_NETWORK_CUSTOM".localized(),
+                             identifier: "network-custom",
+                             enabled: false,
+                             type: .select)
+        ]
     }
 
     static var walletItems: [SettingNode] {
@@ -72,10 +97,6 @@ struct EQSettings {
                              identifier: "about-application",
                              enabled: true,
                              type: .normal)
-//            SettingNode.node(name: "SETTINGS_OPTION_SUPPORT".localized(),
-//                             identifier: "about-support",
-//                             enabled: false,
-//                             type: .normal)
         ]
     }
 
@@ -92,6 +113,29 @@ struct EQSettings {
             SettingNode.node(name: "SETTINGS_OPTION_EXPORT_KEYPAIR".localized(),
                              identifier: "keys-export-private-key",
                              enabled: false,
+                             type: .normal)
+        ]
+    }
+
+    static var supportItems: [SettingNode] {
+        return [
+            SettingNode.node(name: "SETTINGS_OPTION_DIAGNOSTICS".localized(),
+                             identifier: "support-start-diagnostic",
+                             enabled: true,
+                             type: .normal)
+        ]
+    }
+
+    static var debugItems: [SettingNode] {
+        return [
+            networkSection,
+            SettingNode.node(name: "SETTINGS_OPTION_MIMIC".localized(),
+                             identifier: "debug-mimic-account",
+                             enabled: true,
+                             type: .normal),
+            SettingNode.node(name: "SETTINGS_OPTION_INDEXING".localized(),
+                             identifier: "debug-check-indexing",
+                             enabled: true,
                              type: .normal)
         ]
     }
@@ -114,10 +158,22 @@ struct EQSettings {
                                    items: pinItems)
     }
 
+    static var networkSection: SettingNode {
+        return SettingNode.section(name: "SETTINGS_OPTION_NETWORK".localized(),
+                                   identifier: "section-network",
+                                   items: networkItems)
+    }
+
     static var securitySection: SettingNode {
         return SettingNode.section(name: "SETTINGS_SECTION_SECURITY".localized(),
                                    identifier: "section-security",
                                    items: [pinSection])
+    }
+
+    static var supportSection: SettingNode {
+        return SettingNode.section(name: "SETTINGS_SECTION_SUPPORT".localized(),
+                                   identifier: "section-support",
+                                   items: supportItems)
     }
 
     static var aboutSection: SettingNode {
@@ -126,9 +182,15 @@ struct EQSettings {
                                    items: aboutItems)
     }
 
-    static var debugSettings: SettingNode {
+    static var debugSection: SettingNode {
         return SettingNode.section(name: "SETTINGS_SECTION_DEBUG".localized(),
                                    identifier: "section-debug",
-                                   items: [])
+                                   items: debugItems)
+    }
+
+    static var developmentSection: SettingNode {
+        return SettingNode.section(name: "SETTINGS_SECTION_DEVELOPMENT".localized(),
+                                   identifier: "section-development",
+                                   items: [networkSection])
     }
 }

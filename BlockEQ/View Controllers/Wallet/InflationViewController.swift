@@ -7,10 +7,15 @@
 //
 
 import Whisper
-import UIKit
+import StellarHub
 
-class InflationViewController: UIViewController {
+protocol InflationViewControllerDelegate: AnyObject {
+    func updateAccountInflation(_ viewController: InflationViewController, destination: StellarAddress)
+    func clearAccountInflation(_ viewController: InflationViewController)
+    func dismiss(_ viewController: InflationViewController)
+}
 
+final class InflationViewController: UIViewController {
     @IBOutlet var addressHolderView: UIView!
     @IBOutlet var holdingView: UIView!
     @IBOutlet var tableView: UITableView!
@@ -19,53 +24,17 @@ class InflationViewController: UIViewController {
     @IBOutlet var subtitleLabelTopConstraint: NSLayoutConstraint!
     @IBOutlet var destinationAddressTextField: UITextField!
 
-    var inflationDestination: String?
+    weak var delegate: InflationViewControllerDelegate?
+    var account: StellarAccount
     let lumenautInflationDestination = "GCCD6AJOYZCUAQLX32ZJF2MKFFAUJ53PVCFQI3RHWKL3V47QYE2BNAUT"
 
-    @IBAction func addInflationDestination() {
-        guard let inflationDestination = destinationAddressTextField.text,
-            !inflationDestination.isEmpty,
-            inflationDestination.count > 20,
-            inflationDestination != KeychainHelper.accountId else {
-                destinationAddressTextField.shake()
-            return
-        }
-
-        showHud()
-
-        AccountOperation.setInflationDestination(accountId: inflationDestination) { (completed) in
-            self.hideHud()
-
-            if completed {
-                self.displayInflationSuccess()
-            } else {
-                let alert = UIAlertController(title: "INFLATION_ERROR_TITLE".localized(),
-                                              message: "INFLATION_ERROR_MESSAGE".localized(),
-                                              preferredStyle: .alert)
-
-                alert.addAction(UIAlertAction(title: "GENERIC_OK_TEXT".localized(), style: .default, handler: nil))
-
-                self.present(alert, animated: true, completion: nil)
-            }
-        }
-    }
-
-    @IBAction func scanQRCode() {
-        let scanViewController = ScanViewController()
-        scanViewController.delegate = self
-
-        let navigationController = AppNavigationController(rootViewController: scanViewController)
-        present(navigationController, animated: true, completion: nil)
-    }
-
-    init(inflationDestination: String?) {
+    init(account: StellarAccount) {
+        self.account = account
         super.init(nibName: String(describing: InflationViewController.self), bundle: nil)
-
-        self.inflationDestination = inflationDestination
     }
 
     required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
+        fatalError("init(coder:) has not been implemented")
     }
 
     override func viewDidLoad() {
@@ -74,18 +43,10 @@ class InflationViewController: UIViewController {
         setupView()
     }
 
-    func setupView() {
-        navigationItem.title = "Inflation".localized()
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
 
-        tableView.backgroundColor = Colors.lightBackground
-        titleLabel.textColor = Colors.darkGrayTransparent
-        subtitleLabel.textColor = Colors.darkGray
-        destinationAddressTextField.textColor = Colors.darkGray
-        addressHolderView.backgroundColor = Colors.lightBackground
-        holdingView.backgroundColor = Colors.lightBackground
-        view.backgroundColor = Colors.lightBackground
-
-        if let currentInflationDestination = inflationDestination {
+        if let currentInflationDestination = account.inflationDestination {
             destinationAddressTextField.text = currentInflationDestination
             subtitleLabel.text = ""
             subtitleLabelTopConstraint.constant = 0.0
@@ -94,40 +55,54 @@ class InflationViewController: UIViewController {
         }
     }
 
-    func displayInflationSuccess() {
-        self.view.endEditing(true)
-
-        let message = Message(title: "Inflation successfully updated.", backgroundColor: Colors.green)
-        Whisper.show(whisper: message, to: navigationController!, action: .show)
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            Whisper.hide(whisperFrom: self.navigationController!)
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                self.dismissView()
-            }
-        }
-    }
-
-    func showHud() {
-        let hud = MBProgressHUD.showAdded(to: UIApplication.shared.keyWindow!, animated: true)
-        hud.label.text = "Setting Inflation Destination..."
-        hud.mode = .indeterminate
-    }
-
-    func hideHud() {
-        MBProgressHUD.hide(for: UIApplication.shared.keyWindow!, animated: true)
-    }
-
-    func dismissView() {
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
         view.endEditing(true)
+    }
 
-        navigationController?.dismiss(animated: true, completion: nil)
+    func setupView() {
+        navigationItem.title = "SET_INFLATION".localized()
+        tableView.backgroundColor = Colors.lightBackground
+        titleLabel.textColor = Colors.darkGrayTransparent
+        subtitleLabel.textColor = Colors.darkGray
+        destinationAddressTextField.textColor = Colors.darkGray
+        addressHolderView.backgroundColor = Colors.lightBackground
+        holdingView.backgroundColor = Colors.lightBackground
+        destinationAddressTextField.clearButtonMode = .whileEditing
+        view.backgroundColor = Colors.lightBackground
     }
 }
 
+// MARK: - IBActions
+extension InflationViewController {
+    @IBAction func scanQRCode() {
+        let scanViewController = ScanViewController()
+        scanViewController.delegate = self
+
+        let navigationController = AppNavigationController(rootViewController: scanViewController)
+        present(navigationController, animated: true, completion: nil)
+    }
+
+    @IBAction func addInflationDestination() {
+        guard let addressText = destinationAddressTextField.text, !addressText.isEmpty else {
+            delegate?.clearAccountInflation(self)
+            return
+        }
+
+        guard let inflationDestination = StellarAddress(addressText) else {
+            destinationAddressTextField.shake()
+            return
+        }
+
+        delegate?.updateAccountInflation(self, destination: inflationDestination)
+    }
+}
+
+extension InflationViewController: FrameworkErrorPresentable { }
+
+// MARK: - ScanViewControllerDelegate
 extension InflationViewController: ScanViewControllerDelegate {
-    func setQR(value: String) {
+    func setQR(_ viewController: ScanViewController, value: String) {
         destinationAddressTextField.text = value
     }
 }

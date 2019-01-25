@@ -6,14 +6,13 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import UIKit
+import Reusable
 
-class OrderBookCell: UITableViewCell, ReusableView {
+class OrderBookCell: UITableViewCell, NibReusable {
     @IBOutlet weak var option1Label: UILabel!
     @IBOutlet weak var option2Label: UILabel!
     @IBOutlet weak var option3Label: UILabel!
 
-    static let cellIdentifier = "OrderBookCell"
     static let rowHeight: CGFloat = 44.0
 
     override func awakeFromNib() {

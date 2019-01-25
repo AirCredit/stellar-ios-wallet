@@ -6,11 +6,11 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import UIKit
+import StellarHub
 
 protocol TradeSegmentControllerDelegate: AnyObject {
     func setScroll(offset: CGFloat, page: Int)
-    func displayAddAsset()
+    func displayAssetList()
 }
 
 final class TradeSegmentViewController: UIViewController {
@@ -21,12 +21,14 @@ final class TradeSegmentViewController: UIViewController {
     var rightViewController: UIViewController!
     var middleViewController: UIViewController!
     var totalPages: CGFloat!
+    var displayNoAssetOverlay: Bool = true
+
     weak var tradeSegmentDelegate: TradeSegmentControllerDelegate?
 
     override var preferredStatusBarStyle: UIStatusBarStyle { return .default }
 
     @IBAction func addAsset() {
-        tradeSegmentDelegate?.displayAddAsset()
+        tradeSegmentDelegate?.displayAssetList()
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -44,9 +46,24 @@ final class TradeSegmentViewController: UIViewController {
         self.totalPages = totalPages
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        self.refreshView()
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
+    }
+
+    func refreshView() {
+        guard self.isViewLoaded else { return }
+
+        if displayNoAssetOverlay {
+            displayNoAssetOverlayView()
+        } else {
+            hideNoAssetOverlayView()
+        }
     }
 
     func setupView() {
@@ -78,9 +95,12 @@ final class TradeSegmentViewController: UIViewController {
         scrollView.showsHorizontalScrollIndicator = false
     }
 
-    func switchSegment(_ type: TradeSegment) {
+    func switchSegment(_ type: TradeSegment) -> Bool {
+        guard displayNoAssetOverlay != true else { return false }
+
         let offset = CGPoint(x: scrollView.frame.size.width * CGFloat(type.rawValue), y: 0.0)
         scrollView.setContentOffset(offset, animated: true)
+        return true
     }
 
     func displayNoAssetOverlayView() {
@@ -95,6 +115,14 @@ final class TradeSegmentViewController: UIViewController {
 
     func hideNoAssetOverlayView() {
         noAssetView.isHidden = true
+    }
+}
+
+extension TradeSegmentViewController: AccountUpdatable {
+    func updated(account: StellarAccount) {
+        displayNoAssetOverlay = account.assets.count <= 1 ? true : false
+
+        self.refreshView()
     }
 }
 

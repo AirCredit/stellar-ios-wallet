@@ -6,72 +6,104 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import UIKit
+import StellarHub
 
-class BalanceViewController: UIViewController {
+protocol BalanceViewControllerDelegate: AnyObject {
+    func dismiss(_ viewController: BalanceViewController)
+}
 
-    @IBOutlet var availableBalanceView: UIView!
-    @IBOutlet var totalBalanceView: UIView!
-    @IBOutlet var availableBalanceLabel: UILabel!
-    @IBOutlet var baseReserveAmountLabel: UILabel!
-    @IBOutlet var baseReserveValueLabel: UILabel!
-    @IBOutlet var minimumBalanceLabel: UILabel!
-    @IBOutlet var offersAmountLabel: UILabel!
-    @IBOutlet var offersValueLabel: UILabel!
-    @IBOutlet var signersAmountLabel: UILabel!
-    @IBOutlet var signersValueLabel: UILabel!
-    @IBOutlet var totalBalanceLabel: UILabel!
-    @IBOutlet var trustlinesAmountLabel: UILabel!
-    @IBOutlet var trustlinesValueLabel: UILabel!
+final class BalanceViewController: UIViewController {
+    @IBOutlet weak var collectionView: UICollectionView!
 
-    var stellarAccount: StellarAccount!
-    var stellarAsset: StellarAsset!
+    private var asset: StellarAsset!
+    private var dataSource: AssetBalanceDataSource?
 
-    init(stellarAccount: StellarAccount, stellarAsset: StellarAsset) {
-        super.init(nibName: String(describing: BalanceViewController.self), bundle: nil)
-        self.stellarAccount = stellarAccount
-        self.stellarAsset = stellarAsset
-    }
-
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
-    }
+    weak var delegate: BalanceViewControllerDelegate?
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         setupView()
-        setLabelValues()
+        setupStyle()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        collectionView.dataSource = self.dataSource
+        collectionView.reloadData()
+    }
+
+    func setupStyle() {
+        view.backgroundColor = Colors.collectionViewBackground
+
+        collectionView.backgroundColor = .clear
+        collectionView.alwaysBounceVertical = true
+        collectionView.showsHorizontalScrollIndicator = false
+
+        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
+            layout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 20, right: 0)
+            layout.scrollDirection = .vertical
+            layout.minimumLineSpacing = 0
+        }
+
+        collectionView.contentInset = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
     }
 
     func setupView() {
-        navigationItem.title = "LUMEN_BALANCE".localized()
+        setupNavHeader()
+
+        collectionView.register(cellType: AssetIssuerCell.self)
+
+        collectionView.registerHeader(BalanceHeader.self)
+        collectionView.register(cellType: BalanceItemCell.self)
+
+        collectionView.delegate = self
+    }
+
+    func setupNavHeader() {
+        navigationItem.title = "ASSET_BALANCE".localized()
 
         let rightBarButtonItem = UIBarButtonItem(image: UIImage(named: "close"),
                                                  style: .plain,
                                                  target: self,
                                                  action: #selector(self.dismissView))
-        navigationItem.rightBarButtonItem = rightBarButtonItem
 
-        availableBalanceView.backgroundColor = Colors.primaryDark
-        totalBalanceView.backgroundColor = Colors.primaryDark
+        navigationItem.rightBarButtonItem = rightBarButtonItem
     }
 
-    func setLabelValues() {
-        availableBalanceLabel.text = stellarAccount.formattedAvailableBalance
-        baseReserveAmountLabel.text = String(describing: stellarAccount.totalBaseReserve)
-        baseReserveValueLabel.text = stellarAccount.formattedBaseReserve
-        trustlinesAmountLabel.text = String(describing: stellarAccount.totalTrustlines)
-        trustlinesValueLabel.text = stellarAccount.formattedTrustlines
-        offersAmountLabel.text = String(describing: stellarAccount.totalOffers)
-        offersValueLabel.text = stellarAccount.formattedOffers
-        signersAmountLabel.text = String(describing: stellarAccount.totalSigners)
-        signersValueLabel.text = stellarAccount.formattedSigners
-        minimumBalanceLabel.text = stellarAccount.formattedMinBalance
-        totalBalanceLabel.text = stellarAsset.formattedBalance
+    func update(with asset: StellarAsset, account: StellarAccount) {
+        self.asset = asset
+
+        let dataSource = AssetBalanceDataSource(asset: asset, account: account)
+        self.dataSource = dataSource
+
+        guard isViewLoaded else { return }
+        collectionView.dataSource = dataSource
+        collectionView.reloadData()
     }
 
     @objc func dismissView() {
-        dismiss(animated: true, completion: nil)
+        delegate?.dismiss(self)
+    }
+}
+
+extension BalanceViewController: UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView,
+                        layout collectionViewLayout: UICollectionViewLayout,
+                        referenceSizeForHeaderInSection section: Int) -> CGSize {
+        return section == 1 ? CGSize(width: collectionView.bounds.width, height: 75) : .zero
+    }
+}
+
+extension BalanceViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, shouldSelectItemAt indexPath: IndexPath) -> Bool {
+        return false
+    }
+}
+
+extension BalanceViewController: AccountUpdatable {
+    func updated(account: StellarAccount) {
+        self.update(with: self.asset, account: account)
     }
 }

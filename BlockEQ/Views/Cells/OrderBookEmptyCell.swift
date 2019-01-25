@@ -6,17 +6,17 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import UIKit
+import Reusable
 
-class OrderBookEmptyCell: UITableViewCell, ReusableView {
+class OrderBookEmptyCell: UITableViewCell, Reusable, NibLoadable {
     @IBOutlet weak var label: UILabel!
 
-    static let cellIdentifier = "OrderBookEmptyCell"
     static let rowHeight: CGFloat = 100.0
 
     override func awakeFromNib() {
         super.awakeFromNib()
 
         label.textColor = Colors.darkGrayTransparent
+        label.text = "EMPTY_OFFERS".localized()
     }
 }

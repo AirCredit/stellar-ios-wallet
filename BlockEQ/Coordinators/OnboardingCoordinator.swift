@@ -6,11 +6,11 @@
 //  Copyright © 2018 BlockEQ. All rights reserved.
 //
 
-import Foundation
 import stellarsdk
+import StellarHub
 
 protocol OnboardingCoordinatorDelegate: AnyObject {
-    func onboardingCompleted()
+    func onboardingCompleted(service: CoreService)
 }
 
 final class OnboardingCoordinator {
@@ -21,10 +21,12 @@ final class OnboardingCoordinator {
 
     weak var delegate: OnboardingCoordinatorDelegate?
     var authenticationCoordinator: AuthenticationCoordinator?
+    var core: CoreService!
 
     init() {
         navController = AppNavigationController(rootViewController: launchViewController)
         navController.navigationBar.prefersLargeTitles = true
+
         verificationViewController.delegate = self
         launchViewController.delegate = self
     }
@@ -42,21 +44,21 @@ final class OnboardingCoordinator {
 }
 
 extension OnboardingCoordinator: LaunchViewControllerDelegate {
-    func requestedCreateNewWallet(_ viewController: LaunchViewController, type: RecoveryMnemonic.MnemonicType) {
-        guard let mnemonic = RecoveryMnemonic.generate(type: type) else {
+    func requestedCreateNewWallet(_ viewController: LaunchViewController, type: StellarRecoveryMnemonic.MnemonicType) {
+
+        core.accountService.clear()
+
+        guard let mnemonic = StellarRecoveryMnemonic.generate(type: type) else {
             UIAlertController.simpleAlert(title: "ERROR_TITLE".localized(),
                                           message: "MNEMONIC_GENERATION_ERROR".localized(),
                                           presentingViewController: viewController)
             return
         }
 
-        save(mnemonic: mnemonic)
-
-        let mnemonicVC = MnemonicViewController(mnemonic: mnemonic.string, shouldSetPin: false, hideConfirmation: false)
+        let mnemonicVC = MnemonicViewController(mnemonic: mnemonic, mode: .confirm)
         mnemonicVC.delegate = self
 
         self.mnemonicViewController = mnemonicVC
-
         navController.pushViewController(mnemonicVC, animated: true)
     }
 
@@ -66,18 +68,37 @@ extension OnboardingCoordinator: LaunchViewControllerDelegate {
 }
 
 extension OnboardingCoordinator: MnemonicViewControllerDelegate {
-    func confirmedWrittenMnemonic(_ viewController: MnemonicViewController, mnemonic: RecoveryMnemonic) {
+    func confirmedWrittenMnemonic(_ viewController: MnemonicViewController,
+                                  mnemonic: StellarRecoveryMnemonic,
+                                  passphrase: StellarMnemonicPassphrase?) {
+        do {
+            try core.accountService.initializeAccount(with: mnemonic, passphrase: passphrase)
+
+            if let account = core.accountService?.account {
+                CacheManager.cacheAccountQRCode(account)
+            }
+        } catch {
+            core.accountService.clear()
+            UIAlertController.simpleAlert(title: "ERROR_TITLE".localized(),
+                                          message: "MNEMONIC_GENERATION_ERROR".localized(),
+                                          presentingViewController: navController)
+            return
+        }
+
+        recordWalletDiagnostic(mnemonic: mnemonic, recovered: false, passphrase: passphrase != nil)
         authenticate()
     }
 }
 
 extension OnboardingCoordinator: VerificationViewControllerDelegate {
-    func validatedAccount(_ viewController: VerificationViewController, mnemonic: RecoveryMnemonic) {
-        save(mnemonic: mnemonic)
+    func validatedAccount(_ viewController: VerificationViewController,
+                          mnemonic: StellarRecoveryMnemonic,
+                          passphrase: StellarMnemonicPassphrase?) {
+        save(mnemonic: mnemonic, recovered: true, passphrase: passphrase)
         authenticate()
     }
 
-    func validatedAccount(_ viewController: VerificationViewController, secret: SecretSeed) {
+    func validatedAccount(_ viewController: VerificationViewController, secret: StellarSeed) {
         save(secret: secret)
         authenticate()
     }
@@ -103,41 +124,58 @@ extension OnboardingCoordinator: AuthenticationCoordinatorDelegate {
     func authenticationCompleted(_ coordinator: AuthenticationCoordinator,
                                  options: AuthenticationCoordinator.AuthenticationContext?) {
         authenticationCoordinator = nil
-        delegate?.onboardingCompleted()
+
+        if let account = core.accountService.account {
+            KeychainHelper.save(accountId: account.accountId)
+        }
+
+        KeychainHelper.setExistingInstance()
+
+        delegate?.onboardingCompleted(service: core)
     }
 }
 
 extension OnboardingCoordinator {
-    func save(mnemonic: RecoveryMnemonic) {
-        if let keyPair = try? Wallet.createKeyPair(mnemonic: mnemonic.string, passphrase: nil, index: 0) {
-            setPrivateData(keyPair: keyPair, mnemonic: mnemonic.string)
+    func recordWalletDiagnostic(mnemonic: StellarRecoveryMnemonic, recovered: Bool, passphrase: Bool) {
+        guard let accountId = core.accountService.account?.accountId else { return }
+
+        let creationMethod = WalletDiagnostic.CreationMethod.from(mnemonic: mnemonic, recovered: recovered)
+        let diagnostic = WalletDiagnostic(address: accountId,
+                                          creationMethod: creationMethod,
+                                          usesPassphrase: passphrase)
+
+        KeychainHelper.setDiagnostic(diagnostic)
+    }
+
+    func save(mnemonic: StellarRecoveryMnemonic, recovered: Bool, passphrase: StellarMnemonicPassphrase?) {
+        do {
+            try core.accountService.initializeAccount(with: mnemonic, passphrase: passphrase)
+
+            if let account = core.accountService?.account {
+                CacheManager.cacheAccountQRCode(account)
+            }
+
+            recordWalletDiagnostic(mnemonic: mnemonic, recovered: recovered, passphrase: passphrase != nil)
+        } catch {
+            // error
         }
     }
 
-    func save(secret: SecretSeed) {
-        if let keyPair = try? KeyPair(secretSeed: secret.string) {
-            setPrivateData(keyPair: keyPair, seed: secret.string)
-        }
-    }
+    func save(secret: StellarSeed) {
+        do {
+            try core.accountService.initializeAccount(with: secret)
 
-    private func setPrivateData(keyPair: KeyPair, mnemonic: String? = nil, seed: String? = nil) {
-        let privateBytes = keyPair.privateKey?.bytes ?? [UInt8]()
-        let privateKeyData = Data(bytes: privateBytes)
-        let publicKeyData = Data(bytes: keyPair.publicKey.bytes)
+            guard let account = core.accountService.account else { return }
 
-        KeychainHelper.setExistingInstance()
-        KeychainHelper.save(accountId: keyPair.accountId)
-        KeychainHelper.save(publicKey: publicKeyData)
-        KeychainHelper.save(privateKey: privateKeyData)
+            CacheManager.cacheAccountQRCode(account)
 
-        if let mnemonic = mnemonic {
-            KeychainHelper.save(mnemonic: mnemonic)
-        }
+            let diagnostic = WalletDiagnostic(address: account.accountId,
+                                              creationMethod: .recoveredSeed,
+                                              usesPassphrase: false)
 
-        if let newSeed = keyPair.seed?.secret {
-            KeychainHelper.save(seed: newSeed)
-        } else if let existingSeed = seed {
-            KeychainHelper.save(seed: existingSeed)
+            KeychainHelper.setDiagnostic(diagnostic)
+        } catch {
+            // error
         }
     }
 }
